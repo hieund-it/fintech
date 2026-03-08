@@ -11,6 +11,15 @@
 *.sln.docstates
 *.env
 
+# Claude Kit
+.claude
+.opencode
+plans/*
+.repomixignore
+AGENTS.md
+CLAUDE.md
+release-manifest.json
+
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
 
