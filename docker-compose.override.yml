@@ -1,0 +1,16 @@
+# Dev overrides: use this for local development
+# Disables nginx (use Vite dev server directly at :5173)
+services:
+  nginx:
+    profiles:
+      - prod  # Only start nginx in prod profile
+
+  api:
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+    volumes:
+      - ./src:/app/src  # Hot-reload for dev
+
+  vnstock-service:
+    volumes:
+      - ./services/vnstock-service:/app  # Hot-reload

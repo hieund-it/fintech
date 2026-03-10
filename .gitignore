@@ -20,6 +20,8 @@ AGENTS.md
 CLAUDE.md
 release-manifest.json
 
+.continue
+
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
 
@@ -425,3 +427,7 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+COMMIT_VERIFICATION.txt
+PHASE-1-COMPLETION.md
+SYNC-BACK-COMPLETE.txt
+SYNC-BACK-INDEX.md
