@@ -1,0 +1,6 @@
+@VnStock.API_HostAddress = http://localhost:5123
+
+GET {{VnStock.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
