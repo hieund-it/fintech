@@ -1,8 +1,8 @@
 # VnStock Platform — Codebase Summary
 
-**Last Updated:** 2026-03-09
-**Status:** Phase 1 Foundation Complete
-**Version:** v0.1.0-foundation
+**Last Updated:** 2026-03-13
+**Status:** Phase 2 Core Features Complete
+**Version:** v0.2.0-core
 
 ---
 
@@ -16,7 +16,7 @@ VnStock is a full-stack Vietnamese stock market analytics and portfolio manageme
 - **Redis 7** (pub/sub, caching)
 - **Docker Compose** orchestration
 
-Phase 1 (Foundation) is complete with all infrastructure, authentication, and service skeletons in place.
+Phase 2 (Core Features) is complete with real-time market data, OHLCV API, SignalR integration, and interactive charting.
 
 ---
 
@@ -36,11 +36,12 @@ fintech/
 │   │   └── Entities/
 │   │       ├── ApplicationUser.cs      # IdentityUser<Guid> + custom fields
 │   │       ├── RefreshToken.cs         # Token rotation, expiry tracking
-│   │       ├── Stock.cs                # Market metadata (symbol, name, exchange)
-│   │       ├── WatchlistItem.cs        # User watchlist entries
-│   │       ├── Portfolio.cs            # Portfolio container (user-owned)
-│   │       ├── Transaction.cs          # Buy/sell order history
-│   │       └── PriceAlert.cs           # Price alert definitions
+│   │       ├── Stock.cs                # Market metadata (symbol, name, exchange, sector)
+│   │       ├── OhlcvDaily.cs           # Daily OHLCV bars (Open/High/Low/Close/Volume)
+│   │       ├── WatchlistItem.cs        # User watchlist entries (Phase 3)
+│   │       ├── Portfolio.cs            # Portfolio container (Phase 3)
+│   │       ├── Transaction.cs          # Buy/sell order history (Phase 3)
+│   │       └── PriceAlert.cs           # Price alert definitions (Phase 3)
 │   │
 │   ├── VnStock.Application/
 │   │   ├── Auth/
@@ -52,6 +53,15 @@ fintech/
 │   │   │   └── Services/
 │   │   │       ├── AuthService.cs      # Register, login, refresh, logout
 │   │   │       └── TokenService.cs     # JWT generation, validation
+│   │   ├── Market/
+│   │   │   ├── DTOs/
+│   │   │   │   ├── StockDto.cs
+│   │   │   │   └── OhlcvDto.cs
+│   │   │   ├── Services/
+│   │   │   │   ├── IMarketDataService.cs
+│   │   │   │   └── MarketDataService.cs  # Query stocks, OHLCV, sectors
+│   │   │   └── Interfaces/
+│   │   │       └── IMarketDbContext.cs
 │   │   └── Interfaces/
 │   │       └── IAuthDbContext.cs
 │   │
@@ -60,13 +70,17 @@ fintech/
 │   │   │   ├── AppDbContext.cs         # IdentityDbContext + all tables
 │   │   │   └── DependencyInjection.cs  # Service registration
 │   │   └── Migrations/
-│   │       └── 20260309094700_InitialAuth/
+│   │       ├── 20260309094700_InitialAuth/
+│   │       └── 20260313081536_AddMarketTables/
 │   │
 │   └── VnStock.API/
 │       ├── Controllers/
-│       │   └── AuthController.cs       # REST endpoints: /api/auth/*
+│       │   ├── AuthController.cs       # REST endpoints: /api/auth/*
+│       │   └── StocksController.cs     # REST endpoints: /api/stocks/*
 │       ├── Hubs/
-│       │   └── (SignalR stubs for Phase 2)
+│       │   └── MarketHub.cs            # SignalR real-time ticks (JWT auth)
+│       ├── Services/
+│       │   └── RedisMarketDataSubscriber.cs  # Redis → SignalR bridge
 │       ├── Middleware/
 │       │   └── (JWT validation, CORS)
 │       ├── Program.cs                  # Startup configuration
@@ -82,19 +96,23 @@ fintech/
 │   │   │   ├── login-page.tsx          # Login form
 │   │   │   ├── register-page.tsx       # Registration form
 │   │   │   ├── dashboard-page.tsx      # User dashboard (placeholder)
-│   │   │   └── market-page.tsx         # Market data page (placeholder)
+│   │   │   └── market-page.tsx         # Market data + price board
 │   │   │
 │   │   ├── routes/
 │   │   │   └── protected-route.tsx     # ProtectedRoute wrapper
 │   │   │
 │   │   ├── stores/
-│   │   │   └── auth-store.ts           # Zustand auth (login, logout, token)
+│   │   │   ├── auth-store.ts           # Zustand auth (login, logout, token)
+│   │   │   └── market-store.ts         # Zustand market (real-time ticks)
 │   │   │
 │   │   ├── services/
 │   │   │   ├── api-client.ts           # Axios with JWT interceptor
-│   │   │   └── signal-r.ts             # SignalR connection (stub)
+│   │   │   ├── signalr-connection.ts   # SignalR WebSocket client
+│   │   │   └── market-api.ts           # HTTP client for stocks, OHLCV
 │   │   │
 │   │   ├── components/
+│   │   │   ├── price-board/            # Virtualized stock price grid
+│   │   │   ├── chart/                  # TradingView chart wrapper
 │   │   │   └── (shadcn/ui + custom UI)
 │   │   │
 │   │   └── lib/
@@ -225,15 +243,23 @@ RefreshToken
   └── RevokedAt: DateTime?
 ```
 
-### Market Data (Schema Ready for Phase 2)
+### Market Data (Phase 2 ✓)
 
 ```
 Stock
-  ├── Symbol: string (PK)
+  ├── Symbol: string (PK, e.g., "VCB")
   ├── Name: string
-  ├── Exchange: enum (HOSE, HNX, UPCOM)
+  ├── Exchange: string ("HOSE" | "HNX" | "UPCOM")
   ├── Sector: string
-  └── CreatedAt: DateTime
+  └── OhlcvHistory: List<OhlcvDaily>
+
+OhlcvDaily
+  ├── Id: int
+  ├── Symbol: string (FK)
+  ├── Date: DateOnly
+  ├── Open, High, Low, Close: decimal
+  ├── Volume: long
+  └── Index: (symbol, date DESC)
 
 Tick (Partitioned by month)
   ├── Symbol: string (FK)
@@ -241,13 +267,6 @@ Tick (Partitioned by month)
   ├── Price: Decimal(12,2)
   ├── Volume: BigInt
   └── ChangePct: Decimal(8,4)
-
-OhlcvDaily
-  ├── Symbol: string (FK, PK)
-  ├── Date: Date (PK)
-  ├── Open, High, Low, Close: Decimal(12,2)
-  ├── Volume: BigInt
-  └── Index: (symbol, date DESC)
 ```
 
 ### User Features (Schema Ready for Phase 2-3)
@@ -288,17 +307,33 @@ PriceAlert
 
 ---
 
-## API Endpoints (Phase 1)
+## API Endpoints (Phase 1-2)
 
 ### Authentication Routes
 
 | Method | Endpoint | Request | Response | Status |
 |--------|----------|---------|----------|--------|
-| **POST** | `/api/auth/register` | `{ email, password, confirmPassword }` | `{ accessToken, refreshToken }` | ✓ Implemented |
-| **POST** | `/api/auth/login` | `{ email, password }` | `{ accessToken, refreshToken }` | ✓ Implemented |
-| **POST** | `/api/auth/refresh` | `{ refreshToken }` | `{ accessToken }` | ✓ Implemented |
-| **POST** | `/api/auth/logout` | `{}` | `{ success }` | ✓ Implemented |
-| **GET** | `/api/auth/me` | (requires JWT) | `{ userId, email, createdAt }` | ✓ Implemented |
+| **POST** | `/api/auth/register` | `{ email, password, confirmPassword }` | `{ accessToken, refreshToken }` | ✓ Phase 1 |
+| **POST** | `/api/auth/login` | `{ email, password }` | `{ accessToken, refreshToken }` | ✓ Phase 1 |
+| **POST** | `/api/auth/refresh` | `{ refreshToken }` | `{ accessToken }` | ✓ Phase 1 |
+| **POST** | `/api/auth/logout` | `{}` | `{ success }` | ✓ Phase 1 |
+| **GET** | `/api/auth/me` | (requires JWT) | `{ userId, email, createdAt }` | ✓ Phase 1 |
+
+### Market Data Routes (Phase 2)
+
+| Method | Endpoint | Query Params | Response | Cache |
+|--------|----------|--------------|----------|-------|
+| **GET** | `/api/stocks` | `exchange`, `q`, `sector` | `[StockDto]` | 5 min |
+| **GET** | `/api/stocks/{symbol}` | — | `StockDto` | None |
+| **GET** | `/api/stocks/{symbol}/ohlcv` | `from`, `to` (DateOnly) | `[OhlcvDto]` | None |
+| **GET** | `/api/stocks/sectors` | — | `[string]` | 1 hour |
+
+### WebSocket (SignalR)
+
+| Endpoint | Auth | Method | Purpose |
+|----------|------|--------|---------|
+| `/hubs/market` | JWT | SubscribeSymbol | Subscribe to real-time ticks |
+| `/hubs/market` | JWT | UnsubscribeSymbol | Unsubscribe from symbol |
 
 **Security:**
 - JWT: 15-minute access token (HS256)
@@ -306,6 +341,7 @@ PriceAlert
 - Cookies: HttpOnly, Secure, SameSite=Strict
 - Password: bcrypt hashing via ASP.NET Identity
 - Rate Limiting: 5 attempts/minute/IP on login
+- SignalR: JWT auth on connection, max 50 symbols/connection
 
 ---
 
@@ -627,12 +663,30 @@ Python Service: GET /health
 
 ---
 
+## Completed Features by Phase
+
+### Phase 1 ✓
+- Docker Compose orchestration
+- JWT authentication + refresh token rotation
+- PostgreSQL with table partitioning
+- Python TCBS market data polling
+- React SPA with routing
+- Zustand state management
+
+### Phase 2 ✓
+- SignalR Hub with JWT auth and Redis backplane
+- Real-time price board (virtualized for 3000+ symbols)
+- OHLCV REST API with date range queries
+- TradingView Lightweight Charts v5 integration
+- cmdk symbol search with sector filtering
+- Stock and OhlcvDaily entities with proper indexing
+
 ## Known Limitations & Future Work
 
-### Current Limitations (Phase 1)
+### Current Limitations
 
-- Real-time WebSocket updates (Phase 2: SignalR Hub)
-- Frontend UI is skeleton/placeholder only
+- No watchlist/portfolio management (Phase 3)
+- No price alerts or notifications (Phase 3)
 - Single Python service instance (no redundancy)
 - No monitoring/alerting (Phase 4)
 - Limited to Vietnam exchanges (Phase 5: International)
@@ -641,7 +695,6 @@ Python Service: GET /health
 
 | Phase | Feature |
 |-------|---------|
-| **Phase 2** | SignalR Hub, Real-time price board, OHLCV API, TradingView charts |
 | **Phase 3** | Watchlist, Portfolio, P&L engine, Price alerts, Dashboard |
 | **Phase 4** | Mobile responsive UI, Performance optimization, CI/CD, Logging |
 | **Phase 5** | International exchanges, Multi-currency support |
@@ -667,4 +720,4 @@ Python Service: GET /health
 
 ---
 
-**Last Updated:** 2026-03-09 | **Status:** Phase 1 Complete (v0.1.0-foundation)
+**Last Updated:** 2026-03-13 | **Status:** Phase 2 Complete (v0.2.0-core)

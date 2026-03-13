@@ -28,6 +28,8 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\VnStock.Application\VnStock.Application.csproj" />
     <ProjectReference Include="..\..\src\VnStock.Domain\VnStock.Domain.csproj" />
+    <ProjectReference Include="..\..\src\VnStock.Infrastructure\VnStock.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\VnStock.API\VnStock.API.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,8 +1,8 @@
 # VnStock Platform — System Architecture
 
-**Last Updated:** 2026-03-09
-**Phase:** Foundation (v0.1.0)
-**Status:** Complete & Operational
+**Last Updated:** 2026-03-13
+**Phase:** Core Features (v0.2.0)
+**Status:** Phase 2 Implementation Complete
 
 ---
 
@@ -137,7 +137,7 @@ VnStock is a microservice-oriented platform with three independent services orch
 - Business logic (P&L calculation, alerts)
 - SignalR Hub for real-time market data (Phase 2)
 
-**Key Endpoints (Phase 1)**
+**Key Endpoints (Phase 1-2)**
 
 | Endpoint | Method | Purpose | Auth |
 |----------|--------|---------|------|
@@ -146,6 +146,11 @@ VnStock is a microservice-oriented platform with three independent services orch
 | `/api/auth/refresh` | POST | Get new access token | Refresh token |
 | `/api/auth/logout` | POST | Invalidate session | JWT |
 | `/api/auth/me` | GET | Current user profile | JWT |
+| `/api/stocks` | GET | List stocks (search, filter) | No |
+| `/api/stocks/{symbol}` | GET | Stock metadata | No |
+| `/api/stocks/{symbol}/ohlcv` | GET | Daily OHLCV data (date range) | No |
+| `/api/stocks/sectors` | GET | All distinct sectors | No |
+| `/hubs/market` | WebSocket | SignalR real-time ticks | JWT |
 | `/health` | GET | Service health check | No |
 
 ---
@@ -855,35 +860,153 @@ Cookie: refreshToken=...
 
 ---
 
-## Next Steps (Phase 2 Architecture)
+## Phase 2 Implementation Complete (v0.2.0-core)
 
-### SignalR Hub Integration
+### New Architecture Components
+
+**Backend Additions**
+- **MarketHub**: SignalR hub with JWT auth, symbol subscription management
+- **Stock Entity**: Market metadata (symbol, name, exchange, sector)
+- **OhlcvDaily Entity**: Daily OHLCV bars with date indexing
+- **MarketDataService**: Queries stocks, sectors, OHLCV data
+- **StocksController**: REST endpoints for market data
+- **RedisMarketDataSubscriber**: Background service that bridges Redis pub/sub to SignalR
+
+**Frontend Additions**
+- **market-api.ts**: HTTP service for stock queries and OHLCV fetching
+- **signalr-connection.ts**: Singleton SignalR client with JWT authentication
+- **market-store.ts**: Zustand store for real-time tick data (Map<symbol, TickData>)
+- **PriceBoard Component**: Virtualized grid (TanStack Virtual) for 3000+ symbols
+- **Market Page**: Main market view with price board, filters, search
+
+**Entities & Data Model**
+```
+Stock
+  ├── Symbol: string (PK, e.g., "VCB")
+  ├── Name: string
+  ├── Exchange: string ("HOSE" | "HNX" | "UPCOM")
+  ├── Sector: string (e.g., "Banking")
+  └── OhlcvHistory: List<OhlcvDaily>
+
+OhlcvDaily
+  ├── Id: int
+  ├── Symbol: string (FK)
+  ├── Date: DateOnly
+  ├── Open, High, Low, Close: decimal
+  ├── Volume: long
+  └── Index: (symbol, date DESC) for fast lookups
+```
+
+**Database Migration**
+- `20260313081536_AddMarketTables`: Creates Stock and OhlcvDaily tables
+- 15 Vietnamese stocks pre-seeded (VCB, VIC, VHM, HPG, BID, CTB, MBB, TCB, ACB, VPB, FPT, MWG, GAS, SAB, PLX)
+
+### Real-Time Data Architecture
+
+**SignalR + Redis Integration**
+```
+Python Service → Redis pub/sub (ticks:{symbol})
+        ↓
+API RedisMarketDataSubscriber
+        ↓
+MarketHub (SignalR)
+        ↓
+Connected Clients (WebSocket)
+```
+
+**Throttling & Rate Limiting**
+- Max 50 symbols per SignalR connection
+- Redis backplane handles multi-instance broadcasts
+- Subscription count tracked per connection ID
+
+### Frontend Real-Time Updates
+
+**Market Store (Zustand)**
+```typescript
+type TickData = {
+  symbol: string;
+  price: decimal;
+  volume: long;
+  timestamp: DateTime;
+  changePercent: decimal;
+}
+
+market-store: Map<symbol, TickData>
+```
+
+**Price Board**
+- Virtualized rendering (TanStack Virtual) for performance
+- Flash animations on price updates
+- Exchange & sector filtering
+- Real-time subscription via SignalR
+
+### Build & Test Status
+
+- **.NET:** 0 compilation errors, Clean Architecture enforced
+- **React:** 0 TypeScript errors, production build verified
+- **Tests:** 24 unit tests passing (Phase 1-2 combined)
+
+---
+
+## Next Steps (Phase 3 Architecture)
+
+### SignalR Hub Integration (Phase 2 ✓)
 
 ```
 Browser
   ↓ [WebSocket /hubs/market]
 SignalR Hub (on API server)
   ├─ Subscribe to Redis: ticks:{symbol}
-  ├─ Broadcast to connected clients
-  └─ Manage subscriptions per client
+  ├─ Broadcast to connected clients via groups
+  ├─ JWT auth on connection
+  └─ Max 50 symbols per connection (prevent abuse)
+
+Redis Backplane (for multi-instance scaling)
+  └─ Distributes SignalR messages across API replicas
 ```
 
-### Market Data API Endpoints
+**Real-time Flow (Phase 2 ✓):**
+1. Python service fetches tick from TCBS
+2. Publishes to Redis: `ticks:{symbol}` channel
+3. RedisMarketDataSubscriber (API) receives message
+4. MarketHub broadcasts to all subscribed clients via SignalR group
+5. Browser receives tick in <100ms (sub-second latency)
+
+### Market Data API Endpoints (Phase 2 ✓)
+
+**Stock List & Search**
+```
+GET /api/stocks?exchange={exchange}&q={text}&sector={sector}
+→ List stocks, filter by exchange, search text, sector
+→ Cached 5 min (300s)
+```
+
+**OHLCV Historical Data**
+```
+GET /api/stocks/{symbol}/ohlcv?from=2026-01-01&to=2026-03-13
+→ Daily candlestick data from ohlcv_daily table
+→ Supports date range queries
+```
+
+**Sector Filtering**
+```
+GET /api/stocks/sectors
+→ Returns all distinct sectors in system
+→ Cached 1 hour (3600s)
+```
+
+### Caching Strategy
 
 ```
-GET /api/market/ohlcv/{symbol}?start=2026-01-01&end=2026-03-09&interval=1d
-→ Historical 5-year candlestick data from ohlcv_daily table
-```
+API Response Caching (ResponseCache attribute)
+  ├─ GET /api/stocks → 5 min (300s)
+  ├─ GET /api/stocks/sectors → 1 hour (3600s)
+  └─ GET /api/stocks/{symbol} → No cache (metadata)
 
-### Caching Layer
-
-```
-API
-  ├─ [Cache] Latest price per symbol (TTL 1s)
-  ├─ [Cache] OHLCV candles (TTL 1 hour)
-  └─ [Cache] User watchlists (TTL 5 min, invalidate on change)
+Real-time Cache (Redis)
+  └─ Latest price per symbol (TTL 1s, published via SignalR)
 ```
 
 ---
 
-**Last Updated:** 2026-03-09 | **Status:** Phase 1 Complete (v0.1.0-foundation)
+**Last Updated:** 2026-03-13 | **Status:** Phase 2 Complete (v0.2.0-core)
