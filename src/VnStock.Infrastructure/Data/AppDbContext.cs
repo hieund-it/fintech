@@ -2,11 +2,12 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using VnStock.Application.Auth.Services;
+using VnStock.Application.Market.Services;
 using VnStock.Domain.Entities;
 
 namespace VnStock.Infrastructure.Data;
 
-public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid>, IAuthDbContext
+public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid>, IAuthDbContext, IMarketDbContext
 {
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
@@ -15,6 +16,10 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
     public DbSet<Portfolio> Portfolios => Set<Portfolio>();
     public DbSet<Transaction> Transactions => Set<Transaction>();
     public DbSet<PriceAlert> PriceAlerts => Set<PriceAlert>();
+
+    // Market data
+    public DbSet<Stock> Stocks => Set<Stock>();
+    public DbSet<OhlcvDaily> OhlcvDaily => Set<OhlcvDaily>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -56,6 +61,33 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
             // Partial index: alert engine queries only active alerts per tick
             e.HasIndex(a => new { a.Symbol, a.IsActive })
              .HasFilter("\"IsActive\" = true");
+        });
+
+        // Stock: PK on Symbol string
+        builder.Entity<Stock>(e =>
+        {
+            e.HasKey(s => s.Symbol);
+            e.Property(s => s.Symbol).HasMaxLength(10);
+            e.Property(s => s.Name).HasMaxLength(200);
+            e.Property(s => s.Exchange).HasMaxLength(10);
+            e.Property(s => s.Sector).HasMaxLength(100);
+            e.HasIndex(s => s.Exchange);
+        });
+
+        // OhlcvDaily: composite index (symbol, date) for range queries
+        builder.Entity<OhlcvDaily>(e =>
+        {
+            e.HasKey(o => o.Id);
+            e.Property(o => o.Symbol).HasMaxLength(10);
+            e.Property(o => o.Open).HasPrecision(12, 2);
+            e.Property(o => o.High).HasPrecision(12, 2);
+            e.Property(o => o.Low).HasPrecision(12, 2);
+            e.Property(o => o.Close).HasPrecision(12, 2);
+            e.HasIndex(o => new { o.Symbol, o.Date }).IsUnique();
+            e.HasOne(o => o.Stock)
+             .WithMany(s => s.OhlcvHistory)
+             .HasForeignKey(o => o.Symbol)
+             .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

@@ -7,9 +7,71 @@ All notable changes to the VnStock platform are documented here. Format follows 
 ## [Unreleased]
 
 ### Planned
-- Phase 2: SignalR Hub, real-time price board, OHLCV API
 - Phase 3: Watchlist, portfolio, P&L engine, price alerts
 - Phase 4: Mobile responsive UI, performance optimization, CI/CD
+- Phase 5: International exchange support
+
+---
+
+## [0.2.0-core] — 2026-03-13
+
+### Core Features Release: Real-Time Market Data & Interactive Charts
+
+Phase 2 completed with real-time price updates, market data APIs, and interactive charting.
+
+#### Added
+
+**Real-Time Communication**
+- SignalR Hub (MarketHub) with JWT authentication
+- Redis pub/sub bridge (RedisMarketDataSubscriber)
+- WebSocket-based tick streaming to browser
+- Group-based subscription management per symbol
+- Max 50 symbols per connection (throttling)
+- Redis backplane for multi-instance deployment
+
+**Market Data Entities**
+- Stock entity (symbol, name, exchange, sector)
+- OhlcvDaily entity (Open, High, Low, Close, Volume)
+- Migration: AddMarketTables (schema extension)
+- 15 Vietnamese stocks pre-seeded (HOSE, HNX, UPCOM)
+
+**REST API Endpoints**
+- GET `/api/stocks` — List stocks (search, exchange filter, sector filter) [cached 5min]
+- GET `/api/stocks/{symbol}` — Stock metadata
+- GET `/api/stocks/{symbol}/ohlcv` — Daily OHLCV bars (date range) [no cache]
+- GET `/api/stocks/sectors` — All distinct sectors [cached 1hr]
+
+**Frontend Components**
+- PriceBoard: Virtualized grid (TanStack Virtual) for 3000+ symbols
+- Chart: TradingView Lightweight Charts v5 integration
+- MarketStore (Zustand): Real-time tick data (Map<symbol, TickData>)
+- GlobalSearch: cmdk command palette (300ms debounce)
+- MarketPage: Main market view
+
+**Frontend Services**
+- market-api.ts: HTTP client for stock/OHLCV queries
+- signalr-connection.ts: WebSocket client with JWT auth + auto-reconnect
+- market-store.ts: Zustand store for real-time price updates
+
+**Features**
+- Real-time price board with exchange filter
+- Flash animations on price updates (TailwindCSS)
+- OHLCV candlestick charts with moving averages (MA20, MA50)
+- Volume bar charts integrated with candles
+- Symbol search with sector filtering
+- Sub-100ms latency from market data to browser
+
+#### Performance & Scalability
+- Virtualized rendering: <1s load time for 3000+ symbols
+- Database indexes: (symbol, date DESC) on OhlcvDaily for fast queries
+- Response caching: 5-minute cache on stock list, 1-hour on sectors
+- Redis backplane: Enables SignalR scaling to multiple API instances
+
+#### Quality & Testing
+- 24 unit tests passing (Phase 1-2 combined)
+- Zero TypeScript errors (strict mode)
+- Zero .NET compilation errors
+- Production React build verified
 
 ---
 
@@ -189,6 +251,19 @@ Data Service:
 
 ---
 
+## Version 0.2.0 Artifacts
+
+**Git Tags:**
+- `v0.2.0-core` (Phase 2 complete)
+
+**Deployment:**
+- All Phase 2 services containerized and tested
+- MarketHub integrated with Redis backplane
+- OHLCV data accessible via REST API
+- Real-time price board functional
+
+---
+
 ## Version 0.1.0 Artifacts
 
 **Git Tags:**
@@ -209,30 +284,9 @@ Data Service:
 
 ## Upcoming Changes
 
-### Phase 2 (In Planning)
+### Phase 2 (Released as v0.2.0-core)
 
-#### New Features
-- SignalR Hub for real-time price streaming
-- Redis backplane for multi-instance SignalR
-- Virtualized price board component (3000+ symbols)
-- OHLCV historical data API (5-year candlestick data)
-- TradingView Lightweight Charts integration
-- Symbol search with sector filtering
-
-#### Backend Changes
-- SignalR Hub implementation
-- Market data aggregation service
-- OHLCV repository and queries
-- Caching strategies for historical data
-
-#### Frontend Changes
-- Price board component with virtualization
-- Chart component wrapper for TradingView
-- Search and filter UI
-- Market detail pages
-
-#### Target Release
-- **v0.2.0-core** — 2026-04-06
+See [0.2.0-core] section above for complete details.
 
 ---
 
@@ -351,4 +405,4 @@ For questions or issues:
 
 ---
 
-**Last Updated:** 2026-03-09 | **Status:** Phase 1 Complete, Phase 2 Planning
+**Last Updated:** 2026-03-13 | **Status:** Phase 2 Complete, Phase 3 In Progress

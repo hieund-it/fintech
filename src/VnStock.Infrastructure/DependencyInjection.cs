@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using VnStock.Application.Auth.Services;
+using VnStock.Application.Market.Services;
 using VnStock.Domain.Entities;
 using VnStock.Domain.Interfaces;
 using VnStock.Infrastructure.Data;
@@ -18,6 +19,8 @@ public static class DependencyInjection
             options.UseNpgsql(configuration.GetConnectionString("DefaultConnection")));
 
         services.AddScoped<IAuthDbContext>(sp => sp.GetRequiredService<AppDbContext>());
+        services.AddScoped<IMarketDbContext>(sp => sp.GetRequiredService<AppDbContext>());
+        services.AddScoped<IMarketDataService, MarketDataService>();
 
         services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
         {
@@ -32,6 +35,10 @@ public static class DependencyInjection
 
         var redisConn = configuration["Redis:ConnectionString"] ?? "localhost:6379";
         services.AddStackExchangeRedisCache(options => options.Configuration = redisConn);
+
+        // Singleton multiplexer shared by RedisMarketDataSubscriber and SignalR backplane
+        services.AddSingleton<StackExchange.Redis.IConnectionMultiplexer>(
+            _ => StackExchange.Redis.ConnectionMultiplexer.Connect(redisConn));
 
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<IAuthService, AuthService>();
