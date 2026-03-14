@@ -2,15 +2,14 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /app
 
 # Copy project files for layer caching
-COPY VnStock.sln ./
 COPY src/VnStock.Domain/VnStock.Domain.csproj src/VnStock.Domain/
 COPY src/VnStock.Application/VnStock.Application.csproj src/VnStock.Application/
 COPY src/VnStock.Infrastructure/VnStock.Infrastructure.csproj src/VnStock.Infrastructure/
 COPY src/VnStock.API/VnStock.API.csproj src/VnStock.API/
-RUN dotnet restore
+RUN dotnet restore src/VnStock.API/VnStock.API.csproj
 
 COPY src/ src/
-RUN dotnet publish src/VnStock.API/VnStock.API.csproj -c Release -o /out --no-restore
+RUN dotnet publish src/VnStock.API/VnStock.API.csproj -c Release -o /out
 
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
