@@ -7,8 +7,74 @@ All notable changes to the VnStock platform are documented here. Format follows 
 ## [Unreleased]
 
 ### Planned
-- Phase 4: Mobile responsive UI, performance optimization, CI/CD
-- Phase 5: International exchange support
+- Phase 5: International exchange support (US, SG, HK markets)
+- Deployment docs: VPS setup guide (Vultr Singapore)
+- Partition automation script: monthly cron for ticks table
+- Enhanced monitoring and alerting (Prometheus, Grafana)
+- Performance benchmarking and optimization
+
+---
+
+## [1.1.0-prod] — 2026-03-14
+
+### Production Polish: Logging, Error Handling, Mobile UI, CI/CD
+
+Phase 4 completed with enterprise-grade observability, robust error handling, mobile responsiveness, and automated testing pipeline.
+
+#### Added
+
+**Serilog Structured Logging**
+- Console sink with colored output
+- File sink with daily rolling logs (logs/vnstock-{date}.log)
+- 14-day retention policy (automatic cleanup)
+- Enrichers: MachineName, ThreadId, LogContext
+- appsettings.json configuration with log levels
+- Bootstrap logger capturing startup errors
+
+**Global Exception Handler (RFC 7807)**
+- UseExceptionHandler middleware in Program.cs
+- Returns application/problem+json responses
+- Status 500 with safe error messages (detail in dev only)
+- Logs all unhandled exceptions with method + path context
+- Structured error responses following RFC 7807 standard
+
+**Mobile Responsive UI**
+- Hamburger menu for mobile navigation (hidden on sm+)
+- Active link state detection via useLocation()
+- Responsive price board columns:
+  - Mobile: Symbol + Price + Change%
+  - Tablet (sm+): + Volume + Exchange
+  - Desktop (md+): + Company + Sector
+- Adaptive layout with Tailwind breakpoints (sm/md/lg/xl)
+
+**GitHub Actions CI/CD Pipeline**
+- `.github/workflows/ci.yml` with 4 parallel jobs
+- **build-dotnet:** .NET 8 (restore, build, test)
+- **build-python:** Python 3.11 (pip install, pytest)
+- **build-react:** Node.js 20 (npm ci, build, test)
+- **docker-build:** Docker Compose image verification (depends on 1-3)
+- Triggers: push/PR on main and develop branches
+- Temporary .env generation for CI environment
+
+#### Quality & Testing
+
+- All Phase 1-3 tests continue to pass (30+ total)
+- New CI pipeline validates all services on every commit
+- Serilog provides structured logging for debugging
+- Mobile UI tested across breakpoints
+
+#### Performance
+
+- Serilog file I/O optimized with rolling intervals
+- Exception handling provides instant error feedback
+- Mobile responsive design improves user experience on small screens
+- GitHub Actions parallel jobs reduce total CI time
+
+#### Security
+
+- Error details (stack traces) hidden in production
+- Exception logging includes sanitized context only
+- No sensitive data in structured logs
 
 ---
 

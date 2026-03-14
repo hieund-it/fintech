@@ -7,14 +7,15 @@ import { PriceRow } from './price-row';
 const ROW_HEIGHT = 40;
 const OVERSCAN = 10;
 
+// Responsive columns: mobile shows Symbol+Price+Change, tablet adds Volume+Exchange, desktop adds Company+Sector
 const COLUMNS = [
-  { label: 'Symbol', className: 'w-20' },
-  { label: 'Company', className: 'flex-1' },
-  { label: 'Price', className: 'w-24 text-right' },
-  { label: 'Change%', className: 'w-24 text-right' },
-  { label: 'Volume', className: 'w-24 text-right' },
-  { label: 'Sàn', className: 'w-24 text-center' },
-  { label: 'Sector', className: 'w-24' },
+  { label: 'Symbol',   className: 'w-20' },
+  { label: 'Company',  className: 'hidden md:block flex-1' },
+  { label: 'Price',    className: 'w-24 text-right' },
+  { label: 'Change%',  className: 'w-24 text-right' },
+  { label: 'Volume',   className: 'hidden sm:block w-24 text-right' },
+  { label: 'Sàn',      className: 'hidden sm:block w-24 text-center' },
+  { label: 'Sector',   className: 'hidden lg:block w-24' },
 ];
 
 export function PriceBoard() {
@@ -43,10 +44,9 @@ export function PriceBoard() {
         </span>
       </div>
 
-      {/* Header row */}
-      <div className="grid grid-cols-[80px_1fr_100px_90px_90px_90px_90px]
-                      px-4 py-2 text-xs font-semibold text-slate-500 uppercase
-                      border-b border-slate-800 bg-slate-900 sticky top-0 z-10">
+      {/* Header row — grid matches PriceRow responsive layout */}
+      <div className="flex items-center px-4 py-2 text-xs font-semibold text-slate-500 uppercase
+                      border-b border-slate-800 bg-slate-900 sticky top-0 z-10 gap-2">
         {COLUMNS.map((c) => (
           <div key={c.label} className={c.className}>{c.label}</div>
         ))}

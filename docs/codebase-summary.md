@@ -1,8 +1,8 @@
 # VnStock Platform — Codebase Summary
 
 **Last Updated:** 2026-03-14
-**Status:** Phase 3 User Features Complete — MVP Ready
-**Version:** v1.0.0-mvp
+**Status:** Phase 4 Polish + Production Complete — Production Ready
+**Version:** v1.1.0-prod
 
 ---
 
@@ -29,6 +29,9 @@ fintech/
 ├── Makefile                           # Docker shortcuts (up, down, logs, db-shell)
 ├── docker-compose.yml                 # Service orchestration (5 services)
 ├── .env.example                       # Environment variable reference
+├── .github/
+│   └── workflows/
+│       └── ci.yml                     # GitHub Actions CI/CD pipeline
 │
 ├── src/                               # .NET 8 Backend (Clean Architecture)
 │   ├── VnStock.sln                    # Solution file
@@ -207,7 +210,9 @@ fintech/
 | **ORM** | Entity Framework Core | Database queries and schema management |
 | **Cache/PubSub** | StackExchange.Redis | In-memory caching, real-time message delivery |
 | **Validation** | FluentValidation | Request validation, business logic |
-| **Logging** | Serilog (ready for Phase 2) | Structured logging |
+| **Logging** | Serilog (Phase 4 ✓) | Structured logging (console + rolling file, 14-day retention) |
+| **Error Handling** | ProblemDetails (RFC 7807) | Standardized error responses |
+| **Email** | MailKit 4.3.0 | SMTP for price alert notifications |
 
 **Architecture Pattern:** Clean Architecture (4-project layout)
 - **Domain:** Core entities, business rules
@@ -225,9 +230,10 @@ fintech/
 | **Zustand** | Lightweight state management with persistence |
 | **Axios** | HTTP client with JWT interceptor |
 | **TanStack Query** | Server state management, caching |
-| **TailwindCSS v4** | Utility-first styling |
+| **TailwindCSS v4** | Utility-first styling, responsive breakpoints (sm/md/lg) |
 | **shadcn/ui** | Component library (Radix UI based) |
 | **Vitest** | Unit testing framework |
+| **Mobile UI** | Hamburger menu, responsive columns, adaptive layout (Phase 4) |
 
 ### Data Service — Python 3.11 + FastAPI
 
@@ -746,6 +752,12 @@ Python Service: GET /health
 - AlertEngineService (background service monitoring Redis ticks, fires email alerts)
 - SmtpEmailService (MailKit SMTP integration for notifications)
 - Dashboard with 3-panel layout (watchlist, portfolio, alerts)
+
+### Phase 4 ✓
+- **Serilog Structured Logging:** Console + daily rolling file, 14-day retention, enrichers (MachineName, ThreadId)
+- **Global Exception Handler:** RFC 7807 ProblemDetails middleware, logs unhandled errors with context
+- **Mobile Responsive UI:** Hamburger menu, sm/md/lg breakpoints, responsive price board columns
+- **GitHub Actions CI/CD:** 4-job pipeline (.NET, Python, React, Docker), parallel builds, push/PR triggers
 
 ## Known Limitations & Future Work
 

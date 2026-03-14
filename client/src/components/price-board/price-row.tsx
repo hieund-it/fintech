@@ -20,6 +20,7 @@ const fmtPct = (v: number) => `${v >= 0 ? '+' : ''}${v.toFixed(2)}%`;
 
 /**
  * Single price-board row. Memoized — only re-renders when its own tick changes.
+ * Responsive: mobile shows Symbol+Price+Change, sm adds Volume+Exchange, md adds Company, lg adds Sector.
  */
 export const PriceRow = memo(function PriceRow({ stock, style }: PriceRowProps) {
   // Selector per symbol → prevents global re-render when other symbols update
@@ -28,44 +29,48 @@ export const PriceRow = memo(function PriceRow({ stock, style }: PriceRowProps) 
   return (
     <div
       style={style}
-      className="grid grid-cols-[80px_1fr_100px_90px_90px_90px_90px] items-center
-                 px-4 text-sm border-b border-slate-800 hover:bg-slate-800/50"
+      className="flex items-center gap-2 px-4 text-sm border-b border-slate-800
+                 hover:bg-slate-800/50"
     >
       {/* Symbol — links to detail page */}
       <Link
         to={`/stocks/${stock.symbol}`}
-        className="font-semibold text-blue-400 hover:underline"
+        className="w-20 shrink-0 font-semibold text-blue-400 hover:underline"
       >
         {stock.symbol}
       </Link>
 
-      {/* Company name */}
-      <span className="text-slate-300 truncate pr-4">{stock.name}</span>
+      {/* Company name — hidden on mobile */}
+      <span className="hidden md:block flex-1 text-slate-300 truncate pr-4 min-w-0">
+        {stock.name}
+      </span>
 
       {/* Price */}
-      <div className="text-right">
+      <div className="w-24 shrink-0 text-right">
         <PriceCell value={tick?.price} formatter={fmtPrice} />
       </div>
 
       {/* Change % */}
-      <div className="text-right">
+      <div className="w-24 shrink-0 text-right">
         <PriceCell value={tick?.changePct} formatter={fmtPct} colorize />
       </div>
 
-      {/* Volume */}
-      <div className="text-right text-slate-400">
+      {/* Volume — hidden on xs */}
+      <div className="hidden sm:block w-24 shrink-0 text-right text-slate-400">
         {tick ? fmtVol(tick.volume) : '—'}
       </div>
 
-      {/* Exchange label */}
-      <div className="text-center">
+      {/* Exchange label — hidden on xs */}
+      <div className="hidden sm:flex w-24 shrink-0 justify-center">
         <span className="text-xs px-1.5 py-0.5 rounded bg-slate-700 text-slate-300">
           {stock.exchange}
         </span>
       </div>
 
-      {/* Sector */}
-      <div className="text-slate-500 text-xs truncate">{stock.sector ?? '—'}</div>
+      {/* Sector — hidden below lg */}
+      <div className="hidden lg:block w-24 shrink-0 text-slate-500 text-xs truncate">
+        {stock.sector ?? '—'}
+      </div>
     </div>
   );
 });

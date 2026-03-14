@@ -1108,3 +1108,5 @@ Real-time price ticks via SignalR MarketHub
 ---
 
 **Last Updated:** 2026-03-14 | **Status:** Phase 3 Complete — MVP (v1.0.0-mvp)
+
+See `docs/phase-4-production.md` for Phase 4 implementation details (Serilog, error handling, mobile UI, CI/CD).
