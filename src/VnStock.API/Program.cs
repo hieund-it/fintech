@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Microsoft.EntityFrameworkCore;
 using Serilog;
 using VnStock.API.Services;
 using VnStock.Infrastructure;
@@ -37,6 +38,7 @@ try
     })
     .AddJwtBearer(options =>
     {
+        options.MapInboundClaims = false; // preserve "sub" claim name; prevents NullRef in UserId getter
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuerSigningKey = true,
@@ -91,6 +93,36 @@ try
     });
 
     var app = builder.Build();
+
+    // Apply EF Core migrations and seed reference data on startup
+    using (var scope = app.Services.CreateScope())
+    {
+        var db = scope.ServiceProvider.GetRequiredService<VnStock.Infrastructure.Data.AppDbContext>();
+        db.Database.Migrate();
+
+        // Seed stock reference data if table is empty
+        if (!db.Stocks.Any())
+        {
+            db.Stocks.AddRange(
+                new VnStock.Domain.Entities.Stock { Symbol = "VCB", Name = "Vietcombank", Exchange = "HOSE", Sector = "Banking" },
+                new VnStock.Domain.Entities.Stock { Symbol = "VIC", Name = "Vingroup", Exchange = "HOSE", Sector = "Real Estate" },
+                new VnStock.Domain.Entities.Stock { Symbol = "VHM", Name = "Vinhomes", Exchange = "HOSE", Sector = "Real Estate" },
+                new VnStock.Domain.Entities.Stock { Symbol = "HPG", Name = "Hoa Phat Group", Exchange = "HOSE", Sector = "Steel" },
+                new VnStock.Domain.Entities.Stock { Symbol = "BID", Name = "BIDV", Exchange = "HOSE", Sector = "Banking" },
+                new VnStock.Domain.Entities.Stock { Symbol = "CTG", Name = "VietinBank", Exchange = "HOSE", Sector = "Banking" },
+                new VnStock.Domain.Entities.Stock { Symbol = "MBB", Name = "MB Bank", Exchange = "HOSE", Sector = "Banking" },
+                new VnStock.Domain.Entities.Stock { Symbol = "TCB", Name = "Techcombank", Exchange = "HOSE", Sector = "Banking" },
+                new VnStock.Domain.Entities.Stock { Symbol = "ACB", Name = "ACB Bank", Exchange = "HOSE", Sector = "Banking" },
+                new VnStock.Domain.Entities.Stock { Symbol = "VPB", Name = "VPBank", Exchange = "HOSE", Sector = "Banking" },
+                new VnStock.Domain.Entities.Stock { Symbol = "FPT", Name = "FPT Corporation", Exchange = "HOSE", Sector = "Technology" },
+                new VnStock.Domain.Entities.Stock { Symbol = "MWG", Name = "Mobile World", Exchange = "HOSE", Sector = "Retail" },
+                new VnStock.Domain.Entities.Stock { Symbol = "GAS", Name = "PV Gas", Exchange = "HOSE", Sector = "Oil & Gas" },
+                new VnStock.Domain.Entities.Stock { Symbol = "SAB", Name = "Sabeco", Exchange = "HOSE", Sector = "Consumer Goods" },
+                new VnStock.Domain.Entities.Stock { Symbol = "PLX", Name = "Petrolimex", Exchange = "HOSE", Sector = "Oil & Gas" }
+            );
+            db.SaveChanges();
+        }
+    }
 
     // Global exception handler: returns RFC 7807 ProblemDetails on unhandled exceptions
     app.UseExceptionHandler(errApp =>
