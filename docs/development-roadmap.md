@@ -1,6 +1,6 @@
 # VnStock Platform — Development Roadmap
 
-**Last Updated:** 2026-03-13
+**Last Updated:** 2026-03-14
 
 ---
 
@@ -8,9 +8,9 @@
 
 VnStock is a full-stack Vietnamese stock market analytics and portfolio management platform. Built on .NET 8 (backend), Python (data service), and React 18 (frontend), with PostgreSQL and Redis infrastructure.
 
-**Current Status:** Phase 2 Core Features COMPLETE ✓
-**Overall Progress:** 40% (Phase 1-2 of 5 complete)
-**Target MVP:** End of Phase 3 (v1.0.0 expected Q2 2026)
+**Current Status:** Phase 3 User Features COMPLETE ✓
+**Overall Progress:** 60% (Phase 1-3 of 5 complete)
+**Target MVP:** Phase 3 ACHIEVED — v1.0.0 MVP Released
 
 ---
 
@@ -20,7 +20,7 @@ VnStock is a full-stack Vietnamese stock market analytics and portfolio manageme
 |-------|------|--------|----------|------------|------------------|
 | **1** | Foundation | ✓ COMPLETE | 100% | 2026-03-09 | Docker, .NET Auth, Python Data Service, React Skeleton |
 | **2** | Core Features | ✓ COMPLETE | 100% | 2026-03-13 | SignalR Hub, Real-time Price Board, OHLCV API, Market Data |
-| **3** | User Features | ⏳ In Progress | 0% | 2026-05-11 | Watchlist, Portfolio, P&L, Alerts, Dashboard |
+| **3** | User Features | ✓ COMPLETE | 100% | 2026-03-14 | Watchlist, Portfolio, P&L, Alerts, Dashboard |
 | **4** | Polish & Production | ⏳ Pending | 0% | 2026-06-01 | Mobile UI, Performance, Logging, CI/CD |
 | **5** | International (Post-MVP) | 🔭 Future | 0% | TBD | Multi-market Support, International Exchanges |
 
@@ -232,12 +232,11 @@ VnStock is a full-stack Vietnamese stock market analytics and portfolio manageme
 
 ---
 
-## Phase 3: User Features — IN PROGRESS
+## Phase 3: User Features — COMPLETE ✓
 
-**Target Start:** 2026-03-14
-**Target End:** 2026-05-11
-**Estimated Effort:** 4-6 weeks
-**Progress:** 0% (0/5 tasks started, queue ready)
+**Completed:** 2026-03-14
+**Estimated Effort:** 4-6 weeks (completed on schedule)
+**Progress:** 100% (5/5 tasks completed)
 
 ### Overview
 
@@ -245,21 +244,79 @@ User-specific features: watchlists, portfolio tracking, P&L calculations, price 
 
 ### Tasks
 
-| # | Task | Branch | Effort | Status |
-|---|------|--------|--------|--------|
-| 10 | Watchlist (add/remove, real-time) | `feature/phase03-watchlist` | 2-3d | ⏳ Pending |
-| 11 | Portfolio + transactions CRUD | `feature/phase03-portfolio` | 3-4d | ⏳ Pending |
-| 12 | P&L calculation engine | `feature/phase03-pnl-engine` | 2-3d | ⏳ Pending |
-| 13 | Price alerts (background service) | `feature/phase03-price-alerts` | 3-4d | ⏳ Pending |
-| 14 | Dashboard (portfolio + watchlist) | `feature/phase03-dashboard` | 2-3d | ⏳ Pending |
+| # | Task | Branch | Status |
+|---|------|--------|--------|
+| 10 | Watchlist (add/remove, real-time) | `feature/phase03-watchlist` | ✓ Complete |
+| 11 | Portfolio + transactions CRUD | `feature/phase03-portfolio` | ✓ Complete |
+| 12 | P&L calculation engine | `feature/phase03-pnl-engine` | ✓ Complete |
+| 13 | Price alerts (background service) | `feature/phase03-price-alerts` | ✓ Complete |
+| 14 | Dashboard (portfolio + watchlist) | `feature/phase03-dashboard` | ✓ Complete |
 
-### Success Criteria
+### Implementation Summary
 
-- Add/remove stocks to watchlist in real-time
-- Create multiple portfolios with transactions
-- Calculate P&L, cost basis, performance metrics
-- Trigger price alerts via email/in-app notifications
-- Dashboard shows portfolio overview + watchlist ticker
+**Watchlist Management (Task 10)**
+- WatchlistService with CRUD operations
+- Real-time SignalR updates to all subscribers
+- WatchlistController: GET/POST/DELETE /api/watchlist
+- Frontend: watchlist-panel.tsx with add/remove UI
+
+**Portfolio + Transactions (Task 11)**
+- PortfolioService for portfolio management
+- Transaction tracking with buy/sell support
+- Full CRUD API endpoints
+- PortfolioController: Full CRUD operations
+- Frontend: portfolio-panel.tsx with transaction form and selector
+
+**P&L Calculation Engine (Task 12)**
+- PnLCalculator using weighted-average cost basis
+- Realized and unrealized P&L calculations
+- Integration with Redis for current prices
+- Integrated into PortfolioService.GetPnLAsync()
+
+**Price Alerts with Email (Task 13)**
+- AlertService for alert management
+- AlertEngineService background service (IHostedService)
+- Redis pub/sub integration for real-time price monitoring
+- SmtpEmailService using MailKit for email delivery
+- AlertsController: GET/POST/DELETE/PATCH /api/alerts
+- 5-minute alert reload from database
+- ConcurrentDictionary cache for active alerts
+
+**Dashboard (Task 14)**
+- dashboard-page.tsx with portfolio and watchlist panels
+- Real-time data integration
+- TypeScript types: portfolio.ts, alert.ts
+
+### Deliverables
+
+**Backend**
+- `src/VnStock.Application/Watchlist/` — DTOs, IWatchlistDbContext, IWatchlistService, WatchlistService
+- `src/VnStock.Application/Portfolio/` — DTOs, IPortfolioDbContext, IPortfolioService, PortfolioService
+- `src/VnStock.Application/Portfolio/Services/PnLCalculator.cs` — P&L engine
+- `src/VnStock.Application/Alerts/` — DTOs, IAlertDbContext, IAlertService, AlertService, IEmailService
+- `src/VnStock.Infrastructure/Email/SmtpEmailService.cs` — MailKit SMTP
+- `src/VnStock.API/Controllers/` — WatchlistController, PortfolioController, AlertsController
+- `src/VnStock.API/Services/AlertEngineService.cs` — Background alert service
+- Migration: 20260314023134_AddUserFeatures
+- NuGet: MailKit 4.3.0
+
+**Frontend**
+- `client/src/services/watchlist-api.ts` — Watchlist API client
+- `client/src/services/portfolio-api.ts` — Portfolio API client
+- `client/src/services/alert-api.ts` — Alert API client
+- `client/src/components/watchlist/watchlist-panel.tsx`
+- `client/src/components/portfolio/portfolio-panel.tsx`
+- `client/src/components/alerts/alerts-panel.tsx`
+- `client/src/pages/dashboard-page.tsx` — Updated dashboard
+- `client/src/types/portfolio.ts`, `client/src/types/alert.ts` — TypeScript types
+
+### Success Criteria Met
+
+✓ Add/remove stocks to watchlist in real-time
+✓ Create multiple portfolios with transactions
+✓ Calculate P&L, cost basis, performance metrics
+✓ Trigger price alerts via email/in-app notifications
+✓ Dashboard shows portfolio overview + watchlist ticker
 
 ---
 

@@ -1,13 +1,17 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using VnStock.Application.Alerts.Services;
 using VnStock.Application.Auth.Services;
 using VnStock.Application.Market.Services;
+using VnStock.Application.Portfolio.Services;
+using VnStock.Application.Watchlist.Services;
 using VnStock.Domain.Entities;
 
 namespace VnStock.Infrastructure.Data;
 
-public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid>, IAuthDbContext, IMarketDbContext
+public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid>,
+    IAuthDbContext, IMarketDbContext, IWatchlistDbContext, IPortfolioDbContext, IAlertDbContext
 {
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 

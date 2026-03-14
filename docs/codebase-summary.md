@@ -1,8 +1,8 @@
 # VnStock Platform — Codebase Summary
 
-**Last Updated:** 2026-03-13
-**Status:** Phase 2 Core Features Complete
-**Version:** v0.2.0-core
+**Last Updated:** 2026-03-14
+**Status:** Phase 3 User Features Complete — MVP Ready
+**Version:** v1.0.0-mvp
 
 ---
 
@@ -16,7 +16,7 @@ VnStock is a full-stack Vietnamese stock market analytics and portfolio manageme
 - **Redis 7** (pub/sub, caching)
 - **Docker Compose** orchestration
 
-Phase 2 (Core Features) is complete with real-time market data, OHLCV API, SignalR integration, and interactive charting.
+Phase 3 (User Features) is complete with watchlist management, portfolio tracking, P&L calculations, price alerts, and dashboard.
 
 ---
 
@@ -38,10 +38,10 @@ fintech/
 │   │       ├── RefreshToken.cs         # Token rotation, expiry tracking
 │   │       ├── Stock.cs                # Market metadata (symbol, name, exchange, sector)
 │   │       ├── OhlcvDaily.cs           # Daily OHLCV bars (Open/High/Low/Close/Volume)
-│   │       ├── WatchlistItem.cs        # User watchlist entries (Phase 3)
-│   │       ├── Portfolio.cs            # Portfolio container (Phase 3)
-│   │       ├── Transaction.cs          # Buy/sell order history (Phase 3)
-│   │       └── PriceAlert.cs           # Price alert definitions (Phase 3)
+│   │       ├── WatchlistItem.cs        # User watchlist entries (Phase 3 ✓)
+│   │       ├── Portfolio.cs            # Portfolio container (Phase 3 ✓)
+│   │       ├── Transaction.cs          # Buy/sell order history (Phase 3 ✓)
+│   │       └── PriceAlert.cs           # Price alert definitions (Phase 3 ✓)
 │   │
 │   ├── VnStock.Application/
 │   │   ├── Auth/
@@ -62,6 +62,19 @@ fintech/
 │   │   │   │   └── MarketDataService.cs  # Query stocks, OHLCV, sectors
 │   │   │   └── Interfaces/
 │   │   │       └── IMarketDbContext.cs
+│   │   ├── User/
+│   │   │   ├── Dtos/
+│   │   │   │   ├── WatchlistItemDto.cs
+│   │   │   │   ├── PortfolioDto.cs
+│   │   │   │   ├── TransactionDto.cs
+│   │   │   │   ├── PriceAlertDto.cs
+│   │   │   │   └── PortfolioSummaryDto.cs
+│   │   │   └── Services/
+│   │   │       ├── WatchlistService.cs    # Add/remove watchlist items (Phase 3)
+│   │   │       ├── PortfolioService.cs    # CRUD portfolios + P&L calc (Phase 3)
+│   │   │       ├── TransactionService.cs  # Transaction CRUD (Phase 3)
+│   │   │       ├── PriceAlertService.cs   # Alert CRUD (Phase 3)
+│   │   │       └── PortfolioPLEngine.cs   # Weighted-avg cost basis + P&L (Phase 3)
 │   │   └── Interfaces/
 │   │       └── IAuthDbContext.cs
 │   │
@@ -69,14 +82,22 @@ fintech/
 │   │   ├── Data/
 │   │   │   ├── AppDbContext.cs         # IdentityDbContext + all tables
 │   │   │   └── DependencyInjection.cs  # Service registration
+│   │   ├── BackgroundServices/
+│   │   │   └── AlertEngineService.cs   # Background service: monitors prices, fires alerts (Phase 3)
+│   │   ├── Email/
+│   │   │   └── SmtpEmailService.cs     # MailKit SMTP client (Phase 3)
 │   │   └── Migrations/
 │   │       ├── 20260309094700_InitialAuth/
-│   │       └── 20260313081536_AddMarketTables/
+│   │       ├── 20260313081536_AddMarketTables/
+│   │       └── 20260314_AddUserFeatures/   # Watchlists, Portfolios, Transactions, PriceAlerts
 │   │
 │   └── VnStock.API/
 │       ├── Controllers/
 │       │   ├── AuthController.cs       # REST endpoints: /api/auth/*
-│       │   └── StocksController.cs     # REST endpoints: /api/stocks/*
+│       │   ├── StocksController.cs     # REST endpoints: /api/stocks/*
+│       │   ├── WatchlistController.cs  # REST endpoints: /api/watchlist/* (Phase 3)
+│       │   ├── PortfoliosController.cs # REST endpoints: /api/portfolios/* (Phase 3)
+│       │   └── AlertsController.cs     # REST endpoints: /api/alerts/* (Phase 3)
 │       ├── Hubs/
 │       │   └── MarketHub.cs            # SignalR real-time ticks (JWT auth)
 │       ├── Services/
@@ -95,7 +116,7 @@ fintech/
 │   │   ├── pages/
 │   │   │   ├── login-page.tsx          # Login form
 │   │   │   ├── register-page.tsx       # Registration form
-│   │   │   ├── dashboard-page.tsx      # User dashboard (placeholder)
+│   │   │   ├── dashboard-page.tsx      # User dashboard with 3-panel layout (Phase 3)
 │   │   │   └── market-page.tsx         # Market data + price board
 │   │   │
 │   │   ├── routes/
@@ -103,16 +124,24 @@ fintech/
 │   │   │
 │   │   ├── stores/
 │   │   │   ├── auth-store.ts           # Zustand auth (login, logout, token)
-│   │   │   └── market-store.ts         # Zustand market (real-time ticks)
+│   │   │   ├── market-store.ts         # Zustand market (real-time ticks)
+│   │   │   ├── watchlist-store.ts      # Zustand watchlist (Phase 3)
+│   │   │   └── portfolio-store.ts      # Zustand portfolio (Phase 3)
 │   │   │
 │   │   ├── services/
 │   │   │   ├── api-client.ts           # Axios with JWT interceptor
 │   │   │   ├── signalr-connection.ts   # SignalR WebSocket client
-│   │   │   └── market-api.ts           # HTTP client for stocks, OHLCV
+│   │   │   ├── market-api.ts           # HTTP client for stocks, OHLCV
+│   │   │   ├── watchlist-api.ts        # HTTP client for watchlist (Phase 3)
+│   │   │   ├── portfolio-api.ts        # HTTP client for portfolio (Phase 3)
+│   │   │   └── alerts-api.ts           # HTTP client for alerts (Phase 3)
 │   │   │
 │   │   ├── components/
 │   │   │   ├── price-board/            # Virtualized stock price grid
 │   │   │   ├── chart/                  # TradingView chart wrapper
+│   │   │   ├── watchlist-panel/        # Watchlist UI with real-time prices (Phase 3)
+│   │   │   ├── portfolio-panel/        # Portfolio + P&L table (Phase 3)
+│   │   │   ├── alerts-panel/           # Price alert management (Phase 3)
 │   │   │   └── (shadcn/ui + custom UI)
 │   │   │
 │   │   └── lib/
@@ -307,19 +336,19 @@ PriceAlert
 
 ---
 
-## API Endpoints (Phase 1-2)
+## API Endpoints (Phase 1-3)
 
-### Authentication Routes
+### Authentication Routes (Phase 1 ✓)
 
 | Method | Endpoint | Request | Response | Status |
 |--------|----------|---------|----------|--------|
-| **POST** | `/api/auth/register` | `{ email, password, confirmPassword }` | `{ accessToken, refreshToken }` | ✓ Phase 1 |
-| **POST** | `/api/auth/login` | `{ email, password }` | `{ accessToken, refreshToken }` | ✓ Phase 1 |
-| **POST** | `/api/auth/refresh` | `{ refreshToken }` | `{ accessToken }` | ✓ Phase 1 |
-| **POST** | `/api/auth/logout` | `{}` | `{ success }` | ✓ Phase 1 |
-| **GET** | `/api/auth/me` | (requires JWT) | `{ userId, email, createdAt }` | ✓ Phase 1 |
+| **POST** | `/api/auth/register` | `{ email, password, confirmPassword }` | `{ accessToken, refreshToken }` | ✓ |
+| **POST** | `/api/auth/login` | `{ email, password }` | `{ accessToken, refreshToken }` | ✓ |
+| **POST** | `/api/auth/refresh` | `{ refreshToken }` | `{ accessToken }` | ✓ |
+| **POST** | `/api/auth/logout` | `{}` | `{ success }` | ✓ |
+| **GET** | `/api/auth/me` | (requires JWT) | `{ userId, email, createdAt }` | ✓ |
 
-### Market Data Routes (Phase 2)
+### Market Data Routes (Phase 2 ✓)
 
 | Method | Endpoint | Query Params | Response | Cache |
 |--------|----------|--------------|----------|-------|
@@ -328,12 +357,40 @@ PriceAlert
 | **GET** | `/api/stocks/{symbol}/ohlcv` | `from`, `to` (DateOnly) | `[OhlcvDto]` | None |
 | **GET** | `/api/stocks/sectors` | — | `[string]` | 1 hour |
 
-### WebSocket (SignalR)
+### WebSocket (SignalR) — Phase 2 ✓
 
 | Endpoint | Auth | Method | Purpose |
 |----------|------|--------|---------|
 | `/hubs/market` | JWT | SubscribeSymbol | Subscribe to real-time ticks |
 | `/hubs/market` | JWT | UnsubscribeSymbol | Unsubscribe from symbol |
+
+### Watchlist Routes (Phase 3 ✓)
+
+| Method | Endpoint | Request/Query | Response | Auth |
+|--------|----------|---------------|----------|------|
+| **GET** | `/api/watchlist` | — | `[WatchlistItemDto]` | JWT |
+| **POST** | `/api/watchlist` | `{ symbol }` | `WatchlistItemDto` | JWT |
+| **DELETE** | `/api/watchlist/{symbol}` | — | `{ success }` | JWT |
+
+### Portfolio Routes (Phase 3 ✓)
+
+| Method | Endpoint | Request/Query | Response | Auth |
+|--------|----------|---------------|----------|------|
+| **GET** | `/api/portfolios` | — | `[PortfolioDto]` | JWT |
+| **POST** | `/api/portfolios` | `{ name }` | `PortfolioDto` | JWT |
+| **GET** | `/api/portfolios/{portfolioId}` | — | `PortfolioSummaryDto` | JWT |
+| **POST** | `/api/portfolios/{portfolioId}/transactions` | `{ symbol, type, qty, price }` | `TransactionDto` | JWT |
+| **GET** | `/api/portfolios/{portfolioId}/transactions` | — | `[TransactionDto]` | JWT |
+| **DELETE** | `/api/portfolios/{portfolioId}/transactions/{txnId}` | — | `{ success }` | JWT |
+
+### Price Alerts Routes (Phase 3 ✓)
+
+| Method | Endpoint | Request/Query | Response | Auth |
+|--------|----------|---------------|----------|------|
+| **GET** | `/api/alerts` | `isActive` (optional) | `[PriceAlertDto]` | JWT |
+| **POST** | `/api/alerts` | `{ symbol, targetPrice, condition }` | `PriceAlertDto` | JWT |
+| **PUT** | `/api/alerts/{alertId}` | `{ isActive }` | `PriceAlertDto` | JWT |
+| **DELETE** | `/api/alerts/{alertId}` | — | `{ success }` | JWT |
 
 **Security:**
 - JWT: 15-minute access token (HS256)
@@ -681,12 +738,19 @@ Python Service: GET /health
 - cmdk symbol search with sector filtering
 - Stock and OhlcvDaily entities with proper indexing
 
+### Phase 3 ✓
+- Watchlist CRUD API with real-time SignalR updates
+- Portfolio + Transaction management (add BUY/SELL transactions)
+- P&L Engine (weighted-average cost basis, realized + unrealized P&L)
+- Price Alert system with ABOVE/BELOW conditions
+- AlertEngineService (background service monitoring Redis ticks, fires email alerts)
+- SmtpEmailService (MailKit SMTP integration for notifications)
+- Dashboard with 3-panel layout (watchlist, portfolio, alerts)
+
 ## Known Limitations & Future Work
 
 ### Current Limitations
 
-- No watchlist/portfolio management (Phase 3)
-- No price alerts or notifications (Phase 3)
 - Single Python service instance (no redundancy)
 - No monitoring/alerting (Phase 4)
 - Limited to Vietnam exchanges (Phase 5: International)
@@ -720,4 +784,4 @@ Python Service: GET /health
 
 ---
 
-**Last Updated:** 2026-03-13 | **Status:** Phase 2 Complete (v0.2.0-core)
+**Last Updated:** 2026-03-14 | **Status:** Phase 3 Complete — MVP (v1.0.0-mvp)

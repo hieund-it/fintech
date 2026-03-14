@@ -1,40 +1,29 @@
-import { useAuthStore } from '../stores/auth-store';
+import { WatchlistPanel } from '../components/watchlist/watchlist-panel';
+import { PortfolioPanel } from '../components/portfolio/portfolio-panel';
+import { AlertsPanel } from '../components/alerts/alerts-panel';
 
+/** Dashboard: Portfolio P&L + Watchlist + Price Alerts in a responsive 3-column grid. */
 export function DashboardPage() {
-  const { user, logout } = useAuthStore();
-
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-        <h1 className="text-xl font-bold text-gray-900">VnStock</h1>
-        <div className="flex items-center gap-4">
-          <span className="text-sm text-gray-600">{user?.displayName}</span>
-          <button
-            onClick={() => void logout()}
-            className="text-sm text-red-600 hover:underline"
-          >
-            Logout
-          </button>
-        </div>
-      </nav>
+    <div className="h-full overflow-y-auto bg-slate-950 p-6">
+      <div className="max-w-7xl mx-auto space-y-6">
+        <h2 className="text-lg font-semibold text-white">Dashboard</h2>
 
-      <main className="max-w-7xl mx-auto px-6 py-8">
-        <h2 className="text-2xl font-semibold text-gray-800 mb-6">Dashboard</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-sm font-medium text-gray-500">Portfolio</h3>
-            <p className="mt-2 text-gray-400 text-sm">Coming soon</p>
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          {/* Portfolio takes 2 columns on wide screens */}
+          <div className="xl:col-span-2">
+            <PortfolioPanel />
           </div>
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-sm font-medium text-gray-500">Watchlist</h3>
-            <p className="mt-2 text-gray-400 text-sm">Coming soon</p>
-          </div>
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-sm font-medium text-gray-500">Price Alerts</h3>
-            <p className="mt-2 text-gray-400 text-sm">Coming soon</p>
+
+          {/* Watchlist */}
+          <div>
+            <WatchlistPanel />
           </div>
         </div>
-      </main>
+
+        {/* Alerts full width below */}
+        <AlertsPanel />
+      </div>
     </div>
   );
 }

@@ -4,6 +4,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using VnStock.API.Services;
 using VnStock.Infrastructure;
+using VnStock.Infrastructure.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -49,6 +50,7 @@ builder.Services.AddCors(options =>
 var redisConn = builder.Configuration["Redis:ConnectionString"] ?? "localhost:6379";
 builder.Services.AddSignalR().AddStackExchangeRedis(redisConn);
 builder.Services.AddHostedService<RedisMarketDataSubscriber>();
+builder.Services.AddHostedService<AlertEngineService>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>

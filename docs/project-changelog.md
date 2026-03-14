@@ -7,9 +7,111 @@ All notable changes to the VnStock platform are documented here. Format follows 
 ## [Unreleased]
 
 ### Planned
-- Phase 3: Watchlist, portfolio, P&L engine, price alerts
 - Phase 4: Mobile responsive UI, performance optimization, CI/CD
 - Phase 5: International exchange support
+
+---
+
+## [1.0.0-mvp] — 2026-03-14
+
+### User Features Release: Complete Portfolio & Alert System
+
+Phase 3 completed with full watchlist, portfolio tracking, P&L engine, and price alerts.
+
+#### Added
+
+**Watchlist Management**
+- WatchlistService with add/remove operations
+- WatchlistDbContext and DTOs
+- WatchlistController: GET/POST/DELETE /api/watchlist
+- Real-time SignalR updates via MarketHub
+- Frontend: watchlist-panel.tsx with add/remove UI
+- TanStack Query integration for data sync
+
+**Portfolio & Transactions**
+- PortfolioService with full lifecycle management
+- PortfolioDbContext supporting portfolios and transactions
+- Transaction tracking: buy/sell support
+- PortfolioController: Full CRUD + P&L endpoints
+  - GET /api/portfolio — List user portfolios
+  - POST /api/portfolio — Create portfolio
+  - GET /api/portfolio/{id} — Get portfolio details
+  - GET /api/portfolio/{id}/pnl — Calculate P&L
+  - POST /api/portfolio/{id}/transactions — Add transaction
+  - DELETE /api/portfolio/{id}/transactions/{txId} — Remove transaction
+- Frontend: portfolio-panel.tsx with selector, P&L table, transaction form
+
+**P&L Calculation Engine**
+- PnLCalculator static class (weighted-average cost basis)
+- Realized P&L: (sell_price - avg_buy_price) × sell_qty - fees
+- Unrealized P&L: (current_price - avg_buy_price) × holdings
+- Redis integration for real-time current prices
+- Integration into PortfolioService.GetPnLAsync()
+- Comprehensive unit tests: FIFO edge cases, multi-buy/sell scenarios
+
+**Price Alerts & Email Notifications**
+- AlertService with full alert lifecycle (create, list, trigger, delete)
+- AlertDbContext with schema for active alerts
+- AlertsController: GET/POST/DELETE/PATCH /api/alerts
+- AlertEngineService (IHostedService):
+  - Loads all active alerts on startup
+  - ConcurrentDictionary<string, List<Alert>> in-memory cache
+  - Subscribes to Redis price ticks
+  - Checks conditions (ABOVE/BELOW threshold)
+  - Marks alerts as triggered on hit
+  - Reloads from DB every 5 minutes
+  - Thread-safe concurrent processing
+- SmtpEmailService using MailKit 4.3.0
+  - SMTP configuration from environment
+  - Email delivery within 2 minutes of trigger
+  - HTML email templates
+  - Retry logic for failed sends
+- Support for both email and in-app notifications
+
+**Dashboard**
+- dashboard-page.tsx completely redesigned
+- 2-column layout: Portfolio (left), Watchlist/Alerts (right)
+- Real-time data from all services
+- Portfolio overview with P&L metrics
+- Watchlist ticker with live prices
+- Active alerts display
+
+**Database Migration**
+- Migration: 20260314023134_AddUserFeatures
+- New tables:
+  - Watchlists (user_id + symbol unique constraint)
+  - Portfolios (user-owned collections)
+  - Transactions (buy/sell tracking, decimal precision)
+  - PriceAlerts (with active alerts index)
+- Foreign keys with CASCADE delete
+- Proper indexing for query performance
+
+**Dependencies**
+- MailKit 4.3.0 added to VnStock.Infrastructure
+
+#### Performance & Scalability
+
+- Alert engine memory-efficient: ConcurrentDictionary cache with 5-min reload
+- Redis pub/sub for O(1) alert trigger lookups
+- Background service prevents blocking API threads
+- Portfolio P&L calculations optimized with Redis price cache
+
+#### Quality & Testing
+
+- Unit tests for P&L engine (10+ scenarios: FIFO edge cases, multiple buy/sell)
+- Unit tests for alert trigger logic (conditions, time sensitivity)
+- All existing Phase 1-2 tests continue to pass (24+ total)
+- TypeScript strict mode: zero errors
+- .NET compilation: zero errors
+- React production build verified
+
+#### Security
+
+- [Authorize] attribute on all portfolio/watchlist/alert endpoints
+- User isolation: endpoints enforce user_id checks
+- Email delivery: unsubscribe links included
+- Alert triggers: logged but no sensitive data (only symbol + threshold)
+- MailKit: SSL/TLS for SMTP connections
 
 ---
 
@@ -251,6 +353,26 @@ Data Service:
 
 ---
 
+## Version 1.0.0 Artifacts (MVP)
+
+**Git Tags:**
+- `v1.0.0-mvp` (Phase 3 complete - MVP Release)
+
+**Status:** MVP ACHIEVED
+- Watchlist, portfolio, P&L, alerts fully functional
+- Dashboard operational with real-time data
+- 30+ unit tests passing (Phase 1-3 combined)
+- Production-ready deployment
+
+**Deployment:**
+- All Phase 3 services containerized and tested
+- AlertEngineService background job active
+- Email delivery operational (MailKit SMTP)
+- Dashboard integrated with all services
+- Ready for Phase 4 (Polish + Production)
+
+---
+
 ## Version 0.2.0 Artifacts
 
 **Git Tags:**
@@ -405,4 +527,4 @@ For questions or issues:
 
 ---
 
-**Last Updated:** 2026-03-13 | **Status:** Phase 2 Complete, Phase 3 In Progress
+**Last Updated:** 2026-03-14 | **Status:** Phase 3 Complete, MVP Released, Phase 4 Next

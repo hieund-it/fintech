@@ -2,11 +2,15 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using VnStock.Application.Alerts.Services;
 using VnStock.Application.Auth.Services;
 using VnStock.Application.Market.Services;
+using VnStock.Application.Portfolio.Services;
+using VnStock.Application.Watchlist.Services;
 using VnStock.Domain.Entities;
 using VnStock.Domain.Interfaces;
 using VnStock.Infrastructure.Data;
+using VnStock.Infrastructure.Email;
 
 namespace VnStock.Infrastructure;
 
@@ -20,7 +24,14 @@ public static class DependencyInjection
 
         services.AddScoped<IAuthDbContext>(sp => sp.GetRequiredService<AppDbContext>());
         services.AddScoped<IMarketDbContext>(sp => sp.GetRequiredService<AppDbContext>());
+        services.AddScoped<IWatchlistDbContext>(sp => sp.GetRequiredService<AppDbContext>());
+        services.AddScoped<IPortfolioDbContext>(sp => sp.GetRequiredService<AppDbContext>());
+        services.AddScoped<IAlertDbContext>(sp => sp.GetRequiredService<AppDbContext>());
         services.AddScoped<IMarketDataService, MarketDataService>();
+        services.AddScoped<IWatchlistService, WatchlistService>();
+        services.AddScoped<IPortfolioService, PortfolioService>();
+        services.AddScoped<IAlertService, AlertService>();
+        services.AddSingleton<IEmailService, SmtpEmailService>();
 
         services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
         {

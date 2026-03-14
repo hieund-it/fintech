@@ -1,8 +1,8 @@
 # VnStock Platform — System Architecture
 
-**Last Updated:** 2026-03-13
-**Phase:** Core Features (v0.2.0)
-**Status:** Phase 2 Implementation Complete
+**Last Updated:** 2026-03-14
+**Phase:** User Features (v1.0.0-mvp)
+**Status:** Phase 3 Complete — MVP Release
 
 ---
 
@@ -1009,4 +1009,102 @@ Real-time Cache (Redis)
 
 ---
 
-**Last Updated:** 2026-03-13 | **Status:** Phase 2 Complete (v0.2.0-core)
+## Phase 3 Implementation: User Features & Background Services
+
+### AlertEngineService Architecture
+
+**Background Service Flow**
+```
+AlertEngineService (IHostedService)
+  ├─ Starts at application startup
+  ├─ Subscribes to Redis: ticks:* pattern
+  ├─ Loads active alerts from DB every 5 minutes
+  │   └─ Only monitors isActive=true alerts
+  ├─ On each tick received:
+  │   ├─ Parse symbol + price from Redis message
+  │   ├─ Compare against active alerts for symbol
+  │   ├─ Fire SmtpEmailService if condition met
+  │   └─ Log trigger event
+  └─ Graceful shutdown: unsubscribe + close connections
+```
+
+**Alert Trigger Email**
+```
+SMTP Configuration (from appsettings.json):
+  SmtpHost: smtp.gmail.com (configurable)
+  SmtpPort: 587
+  Username: service-account@example.com
+  Password: app-specific-password (from env)
+  FromAddress: alerts@vnstock.com
+
+Email Template:
+  To: user@example.com
+  Subject: Price Alert Triggered - VCB
+  Body: "Your alert for VCB price >= 180 triggered at 182.50"
+```
+
+### Portfolio P&L Engine
+
+**Weighted-Average Cost Basis**
+```
+Transaction 1: Buy 100 @ 100 = 10,000
+Transaction 2: Buy 50 @ 110 = 5,500
+────────────────────────────
+Total: 150 shares, 15,500 cost
+Average Cost: 15,500 / 150 = 103.33 per share
+
+Current Price: 182.50
+Current Value: 150 * 182.50 = 27,375
+Unrealized P&L: 27,375 - 15,500 = 11,875 (76.6%)
+```
+
+**Realized P&L (On Sale)**
+```
+Sell 50 @ 115 = Revenue 5,750
+Cost of 50 @ avg 103.33 = 5,166.50
+Realized P&L: 5,750 - 5,166.50 = 583.50
+```
+
+### Watchlist + SignalR Real-Time
+
+**Real-Time Update Flow**
+```
+User adds symbol via API
+  ↓
+WatchlistController receives POST /api/watchlist/{symbol}
+  ↓
+WatchlistService.AddWatchlistItemAsync()
+  ↓
+SignalR Hub broadcasts to user group: WatchlistUpdated
+  ↓
+Frontend receives SignalR message
+  ↓
+Zustand store updates (watchlist-store.ts)
+  ↓
+React re-renders WatchlistPanel
+  ↓
+Component subscribes to market updates for symbol
+  ↓
+Real-time price ticks via SignalR MarketHub
+```
+
+### Key Entities & Constraints
+
+**Watchlist**
+- Unique constraint: (userId, symbol) → prevents duplicates
+- Cascade delete: user deletion removes all watchlists
+
+**Portfolio & Transactions**
+- Portfolio FK → User (cascade delete)
+- Transaction FK → Portfolio (cascade delete)
+- Decimal precision: DECIMAL(19,4) for quantities/prices
+- Cost calculated: quantity * price
+
+**PriceAlert**
+- Unique per user+symbol combo
+- Partial index on (userId, isActive) for fast active queries
+- Condition enum: Above (0) or Below (1)
+
+---
+
+**Last Updated:** 2026-03-14 | **Status:** Phase 3 Complete — MVP (v1.0.0-mvp)
