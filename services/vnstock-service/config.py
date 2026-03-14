@@ -1,8 +1,13 @@
 """Application configuration loaded from environment variables."""
+from pathlib import Path
 from urllib.parse import quote_plus
 
 from pydantic import computed_field
 from pydantic_settings import BaseSettings
+
+# Resolve repo root .env regardless of CWD — works both locally and in Docker.
+# In Docker, env vars are injected directly so this file won't exist (silently ignored).
+_ROOT_ENV = Path(__file__).parent.parent.parent / ".env"
 
 
 class Settings(BaseSettings):
@@ -31,7 +36,7 @@ class Settings(BaseSettings):
         return f"postgresql://{user}:{pwd}@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
 
     class Config:
-        env_file = ".env"
+        env_file = str(_ROOT_ENV) if _ROOT_ENV.exists() else ".env"
 
 
 settings = Settings()
