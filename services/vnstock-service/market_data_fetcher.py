@@ -23,7 +23,7 @@ async def fetch_ticks(symbols: list[str]) -> "list[TickData]":
     Fetch latest prices for a list of symbols via vnstock.
     Runs in executor to avoid blocking the event loop (vnstock is sync).
     """
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     return await loop.run_in_executor(None, _fetch_sync, symbols)
 
 
@@ -31,7 +31,7 @@ def _fetch_sync(symbols: list[str]) -> "list[TickData]":
     """Synchronous vnstock fetch — called in thread pool."""
     try:
         from vnstock import Vnstock  # type: ignore[import]
-        stock = Vnstock().stock(symbol=symbols[0], source="TCBS")
+        stock = Vnstock().stock(symbol=symbols[0], source="VCI")
         raw_df = stock.trading.price_board(symbols_list=symbols)
         if raw_df is None or raw_df.empty:
             return []
