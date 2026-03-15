@@ -1,4 +1,6 @@
 using System.Text;
+using AspNet.Security.OAuth.GitHub;
+using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
@@ -54,6 +56,36 @@ try
             ClockSkew = TimeSpan.Zero
         };
     });
+
+    // Register OAuth providers only when credentials are configured — prevents startup failures in environments without OAuth keys
+    var googleClientId = builder.Configuration["OAuth:Google:ClientId"];
+    var googleClientSecret = builder.Configuration["OAuth:Google:ClientSecret"];
+    if (!string.IsNullOrEmpty(googleClientId) && !string.IsNullOrEmpty(googleClientSecret))
+    {
+        builder.Services.AddAuthentication()
+            .AddGoogle(options =>
+            {
+                options.ClientId = googleClientId;
+                options.ClientSecret = googleClientSecret;
+                options.CallbackPath = "/api/auth/oauth/google/signin";
+                options.SaveTokens = false;
+            });
+    }
+
+    var githubClientId = builder.Configuration["OAuth:GitHub:ClientId"];
+    var githubClientSecret = builder.Configuration["OAuth:GitHub:ClientSecret"];
+    if (!string.IsNullOrEmpty(githubClientId) && !string.IsNullOrEmpty(githubClientSecret))
+    {
+        builder.Services.AddAuthentication()
+            .AddGitHub(options =>
+            {
+                options.ClientId = githubClientId;
+                options.ClientSecret = githubClientSecret;
+                options.CallbackPath = "/api/auth/oauth/github/signin";
+                options.Scope.Add("user:email");
+                options.SaveTokens = false;
+            });
+    }
 
     builder.Services.AddAuthorization();
 

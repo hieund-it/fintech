@@ -3,6 +3,7 @@ export interface AuthUser {
   email: string;
   displayName: string;
   accessToken: string;
+  avatarUrl?: string;
 }
 
 export interface RegisterRequest {

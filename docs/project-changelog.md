@@ -6,6 +6,19 @@ All notable changes to the VnStock platform are documented here. Format follows 
 
 ## [Unreleased]
 
+### Added
+
+**OAuth Login (Google + GitHub)**
+- OAuth challenge/callback endpoints: `GET /api/auth/oauth/{google|github}` + `GET /api/auth/oauth/{provider}/callback`
+- `ExternalLoginAsync` method for find-or-create user flow (auto-links by email)
+- `AvatarUrl` property added to `ApplicationUser`
+- Avatar URL included in JWT claims and `/api/auth/me` response
+- Frontend: Google + GitHub OAuth buttons on login page
+- Frontend: `/auth/callback` page handles token from URL, stores in Zustand, redirects to dashboard
+- EF Core migration: `AddAvatarUrl` (adds nullable text column to AspNetUsers)
+- Uses built-in `AspNetUserLogins` table for OAuth credentials (no new table)
+- Refresh token still in HttpOnly cookie, access token in URL param (short-lived, 15min)
+
 ### Planned
 - Phase 5: International exchange support (US, SG, HK markets)
 - Deployment docs: VPS setup guide (Vultr Singapore)
@@ -593,4 +606,4 @@ For questions or issues:
 
 ---
 
-**Last Updated:** 2026-03-14 | **Status:** Phase 3 Complete, MVP Released, Phase 4 Next
+**Last Updated:** 2026-03-15 | **Status:** Phase 4 Complete, OAuth Login Added, Phase 5 (International) Next

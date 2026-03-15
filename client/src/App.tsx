@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { LoginPage } from './pages/login-page';
+import { OAuthCallbackPage } from './pages/oauth-callback-page';
 import { RegisterPage } from './pages/register-page';
 import { DashboardPage } from './pages/dashboard-page';
 import { MarketPage } from './pages/market-page';
@@ -133,6 +134,7 @@ export function App() {
           {/* Public auth routes — no nav */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/auth/callback" element={<OAuthCallbackPage />} />
 
           {/* Protected app routes — with nav */}
           <Route

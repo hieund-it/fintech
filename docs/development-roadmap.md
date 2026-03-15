@@ -1,6 +1,6 @@
 # VnStock Platform — Development Roadmap
 
-**Last Updated:** 2026-03-14
+**Last Updated:** 2026-03-15
 
 ---
 
@@ -8,10 +8,11 @@
 
 VnStock is a full-stack Vietnamese stock market analytics and portfolio management platform. Built on .NET 8 (backend), Python (data service), and React 18 (frontend), with PostgreSQL and Redis infrastructure.
 
-**Current Status:** Phase 4 Polish + Production COMPLETE ✓
-**Overall Progress:** 80% (Phase 1-4 of 5 complete)
+**Current Status:** Phase 4 Polish + Production COMPLETE ✓ | OAuth Login COMPLETE ✓
+**Overall Progress:** 85% (Phase 1-4 + OAuth feature complete)
 **Target MVP:** Phase 3 ACHIEVED — v1.0.0 MVP Released
 **Phase 4 Release:** v1.1.0-prod Released with mobile UI, logging, CI/CD
+**OAuth Release:** OAuth login (Google + GitHub) feature complete
 
 ---
 
@@ -23,6 +24,7 @@ VnStock is a full-stack Vietnamese stock market analytics and portfolio manageme
 | **2** | Core Features | ✓ COMPLETE | 100% | 2026-03-13 | SignalR Hub, Real-time Price Board, OHLCV API, Market Data |
 | **3** | User Features | ✓ COMPLETE | 100% | 2026-03-14 | Watchlist, Portfolio, P&L, Alerts, Dashboard |
 | **4** | Polish & Production | ✓ COMPLETE | 100% | 2026-03-14 | Mobile UI, Serilog Logging, RFC 7807 Errors, GitHub Actions CI/CD |
+| **OAuth** | OAuth Login | ✓ COMPLETE | 100% | 2026-03-15 | Google + GitHub OAuth, AvatarUrl, Callback Flow |
 | **5** | International (Post-MVP) | 🔭 Future | 0% | TBD | Multi-market Support, International Exchanges |
 
 ---
@@ -490,6 +492,7 @@ Phase 5 (International) — independent, post-MVP
 
 | Date | Author | Changes |
 |------|--------|---------|
+| 2026-03-15 | Project Manager | OAuth login implementation complete: Google + GitHub OAuth endpoints, avatar support, callback flow. Overall 85% complete. |
 | 2026-03-14 | Project Manager | Phase 4 completion: Mobile responsive UI, Serilog logging, RFC 7807 errors, GitHub Actions CI/CD. Overall 80% complete. |
 | 2026-03-13 | Documentation Manager | Phase 2 completion: SignalR, OHLCV API, Price Board, Charts, Search |
 | 2026-03-09 | Project Manager | Created roadmap; Phase 1 completion sync-back |

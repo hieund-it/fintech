@@ -63,6 +63,55 @@ public class AuthService : IAuthService
         return (newAccess, newRefresh);
     }
 
+    public async Task<(ApplicationUser user, string accessToken, string refreshToken)> ExternalLoginAsync(
+        string provider, string providerKey, string email, string displayName,
+        string? avatarUrl = null, CancellationToken ct = default)
+    {
+        // 1. Check if external login already linked
+        var user = await _userManager.FindByLoginAsync(provider, providerKey);
+
+        if (user is null)
+        {
+            // 2. Check if user with same email exists
+            user = await _userManager.FindByEmailAsync(email);
+
+            if (user is null)
+            {
+                // 3. Create new user (no password required for OAuth users)
+                user = new ApplicationUser
+                {
+                    Email = email,
+                    UserName = email,
+                    DisplayName = displayName,
+                    AvatarUrl = avatarUrl,
+                    EmailConfirmed = true
+                };
+                var createResult = await _userManager.CreateAsync(user);
+                if (!createResult.Succeeded)
+                    throw new InvalidOperationException(
+                        string.Join(", ", createResult.Errors.Select(e => e.Description)));
+            }
+
+            // 4. Link external login to user
+            // Capitalize provider name for display (e.g. "google" → "Google") for future connected-accounts UI
+            var providerDisplayName = char.ToUpperInvariant(provider[0]) + provider[1..];
+            var loginInfo = new UserLoginInfo(provider, providerKey, providerDisplayName);
+            var addResult = await _userManager.AddLoginAsync(user, loginInfo);
+            if (!addResult.Succeeded)
+                throw new InvalidOperationException(
+                    string.Join(", ", addResult.Errors.Select(e => e.Description)));
+        }
+
+        // 5. Update avatar if changed
+        if (avatarUrl is not null && user.AvatarUrl != avatarUrl)
+        {
+            user.AvatarUrl = avatarUrl;
+            await _userManager.UpdateAsync(user);
+        }
+
+        return await CreateTokensAsync(user, ct);
+    }
+
     public async Task LogoutAsync(string refreshToken, CancellationToken ct = default)
     {
         var tokenHash = _tokenService.HashToken(refreshToken);

@@ -4,5 +4,6 @@ public record AuthResponse(
     string UserId,
     string Email,
     string DisplayName,
-    string AccessToken
+    string AccessToken,
+    string? AvatarUrl = null
 );
