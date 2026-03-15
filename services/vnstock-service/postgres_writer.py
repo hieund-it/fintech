@@ -45,8 +45,7 @@ class BatchWriter:
             logger.warning("PostgreSQL pool not initialized, skipping flush")
             return
 
-        batch = self._buffer.copy()
-        self._buffer.clear()
+        batch, self._buffer = self._buffer[:], []
 
         try:
             async with self._pool.acquire() as conn:

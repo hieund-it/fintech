@@ -11,7 +11,12 @@ _ROOT_ENV = Path(__file__).parent.parent.parent / ".env"
 
 
 class Settings(BaseSettings):
-    redis_url: str = "redis://localhost:6379"
+    # Base redis URL without auth; redis_url computed field below builds the final URL.
+    redis_host: str = "localhost"
+    redis_port: int = 6379
+    redis_password: str = ""
+    # Optional TLS — set to rediss:// if Redis requires SSL
+    redis_scheme: str = "redis"
 
     # Individual Postgres params — avoids URL-encoding issues with special chars in passwords
     postgres_host: str = "localhost"
@@ -20,12 +25,24 @@ class Settings(BaseSettings):
     postgres_user: str = "postgres"
     postgres_password: str = "changeme"
 
+    # Redis pub/sub channel prefix — must match the C# subscriber pattern
+    redis_channel_prefix: str = "ticks"
+
     # Polling interval in seconds between vnstock API calls
     tcbs_poll_interval: float = 3.0
     # How often to flush tick buffer to PostgreSQL (seconds)
     batch_persist_interval: float = 5.0
     symbols_file: str = "symbols.json"
     log_level: str = "INFO"
+
+    @computed_field
+    @property
+    def redis_url(self) -> str:
+        """Build Redis URL, including password auth when REDIS_PASSWORD is set."""
+        if self.redis_password:
+            pwd = quote_plus(self.redis_password)
+            return f"{self.redis_scheme}://:{pwd}@{self.redis_host}:{self.redis_port}"
+        return f"{self.redis_scheme}://{self.redis_host}:{self.redis_port}"
 
     @computed_field
     @property

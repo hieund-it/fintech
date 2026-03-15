@@ -8,22 +8,32 @@ The script:
 1. Reads symbol list from a JSON file (or uses a built-in top-50 default).
 2. Fetches daily OHLCV history via vnstock for each symbol.
 3. Upserts Stock rows and inserts OhlcvDaily rows into PostgreSQL.
+4. Commits after each symbol — safe to interrupt and re-run (idempotent).
+5. Auto-detects rate-limit errors and waits before retrying (max 3 attempts).
 """
 
 import argparse
 import json
 import os
 import sys
+import time
 from datetime import date, timedelta
 
 import psycopg2
 import psycopg2.extras
 
 try:
-    from vnstock3 import Vnstock
+    from vnstock import Vnstock  # vnstock >= 3.x
 except ImportError:
-    print("vnstock3 not installed. Run: pip install vnstock3")
+    print("vnstock not installed. Run: pip install vnstock")
     sys.exit(1)
+
+# Rate-limit: free plan = 20 req/min. Wait 65s before retrying.
+_RATE_LIMIT_WAIT = 65
+_MAX_RETRIES = 3
+
+# Keywords in exception messages that indicate rate-limiting
+_RATE_LIMIT_SIGNALS = ("rate", "429", "wait", "retry", "limit", "request")
 
 # Default top-50 HOSE stocks used when no --symbols file is provided
 DEFAULT_SYMBOLS = [
@@ -81,16 +91,19 @@ DEFAULT_SYMBOLS = [
 
 
 def get_db_connection() -> psycopg2.extensions.connection:
-    """Create PostgreSQL connection from environment or defaults."""
-    dsn = os.getenv(
-        "DATABASE_URL",
-        "postgresql://vnstock_user:changeme@localhost:5432/vnstock"
-    )
+    """Build PostgreSQL DSN from individual env vars (same as vnstock-service config.py)."""
+    from urllib.parse import quote_plus
+    host = os.getenv("POSTGRES_HOST", "localhost")
+    port = os.getenv("POSTGRES_PORT", "5433")
+    db   = os.getenv("POSTGRES_DB",   "vnstock")
+    user = os.getenv("POSTGRES_USER", "postgres")
+    pwd  = os.getenv("POSTGRES_PASSWORD", "")
+    dsn  = f"postgresql://{quote_plus(user)}:{quote_plus(pwd)}@{host}:{port}/{db}"
     return psycopg2.connect(dsn)
 
 
-def upsert_stocks(cursor, symbols: list[dict]) -> None:
-    """Insert or update stock metadata rows."""
+def upsert_stocks(conn, symbols: list[dict]) -> None:
+    """Insert or update stock metadata rows and commit immediately."""
     sql = """
         INSERT INTO "Stocks" ("Symbol", "Name", "Exchange", "Sector")
         VALUES %s
@@ -100,32 +113,19 @@ def upsert_stocks(cursor, symbols: list[dict]) -> None:
                 "Sector" = EXCLUDED."Sector"
     """
     values = [(s["symbol"], s["name"], s["exchange"], s.get("sector")) for s in symbols]
-    psycopg2.extras.execute_values(cursor, sql, values)
+    with conn.cursor() as cur:
+        psycopg2.extras.execute_values(cur, sql, values)
+    conn.commit()
     print(f"  Upserted {len(values)} stock rows.")
 
 
-def fetch_and_insert_ohlcv(
-    cursor,
-    symbol: str,
-    start_date: str,
-    end_date: str,
-) -> int:
-    """Fetch OHLCV history for one symbol and bulk-insert into ohlcv_daily."""
-    try:
-        stock = Vnstock().stock(symbol=symbol, source="TCBS")
-        df = stock.quote.history(start=start_date, end=end_date, interval="1D")
-    except Exception as exc:
-        print(f"    [WARN] Failed to fetch {symbol}: {exc}")
-        return 0
+def _fetch_ohlcv(symbol: str, start_date: str, end_date: str) -> list[tuple]:
+    """Fetch OHLCV from vnstock API and return list of DB-ready row tuples."""
+    stock = Vnstock().stock(symbol=symbol, source="VCI")
+    df = stock.quote.history(start=start_date, end=end_date, interval="1D")
 
     if df is None or df.empty:
-        print(f"    [SKIP] No data for {symbol}.")
-        return 0
-
-    # Rename columns to our convention if needed
-    col_map = {"time": "date", "open": "open", "high": "high", "low": "low",
-               "close": "close", "volume": "volume"}
-    df = df.rename(columns={v: v for v in col_map})
+        return []
 
     rows = []
     for _, row in df.iterrows():
@@ -138,7 +138,11 @@ def fetch_and_insert_ohlcv(
             float(row.get("close", 0)),
             int(row.get("volume", 0)),
         ))
+    return rows
 
+
+def _insert_ohlcv(conn, rows: list[tuple]) -> None:
+    """Bulk-upsert OHLCV rows and commit."""
     sql = """
         INSERT INTO "OhlcvDaily" ("Symbol", "Date", "Open", "High", "Low", "Close", "Volume")
         VALUES %s
@@ -149,8 +153,56 @@ def fetch_and_insert_ohlcv(
                 "Close"  = EXCLUDED."Close",
                 "Volume" = EXCLUDED."Volume"
     """
-    psycopg2.extras.execute_values(cursor, sql, rows)
-    return len(rows)
+    with conn.cursor() as cur:
+        psycopg2.extras.execute_values(cur, sql, rows)
+    conn.commit()
+
+
+def _is_rate_limit_error(exc: BaseException) -> bool:
+    """Return True if the exception looks like a rate-limit or quota error.
+    vnstock calls sys.exit(1) on rate-limit, so we also check SystemExit.
+    """
+    if isinstance(exc, SystemExit):
+        return True
+    msg = str(exc).lower()
+    return any(signal in msg for signal in _RATE_LIMIT_SIGNALS)
+
+
+def fetch_and_persist_symbol(
+    conn, symbol: str, start_date: str, end_date: str
+) -> int:
+    """
+    Fetch OHLCV for one symbol with auto-retry on rate-limit.
+
+    Strategy:
+    - On rate-limit: wait _RATE_LIMIT_WAIT seconds, then retry (max _MAX_RETRIES times)
+    - On success: insert + commit immediately so data is never lost
+    - On non-rate-limit error: skip the symbol
+    """
+    for attempt in range(1, _MAX_RETRIES + 1):
+        try:
+            rows = _fetch_ohlcv(symbol, start_date, end_date)
+            if not rows:
+                print(f"[SKIP] No data")
+                return 0
+            _insert_ohlcv(conn, rows)
+            return len(rows)
+
+        except Exception as exc:  # catches rate-limit errors; KeyboardInterrupt propagates normally
+            if _is_rate_limit_error(exc):
+                wait = _RATE_LIMIT_WAIT * attempt  # 65s, 130s, 195s
+                print(
+                    f"\n  [RATE LIMIT] attempt {attempt}/{_MAX_RETRIES}. "
+                    f"Waiting {wait}s before retry...",
+                    flush=True,
+                )
+                time.sleep(wait)
+            else:
+                print(f"[FAIL] {exc}")
+                return 0
+
+    print(f"[FAIL] Gave up after {_MAX_RETRIES} retries.")
+    return 0
 
 
 def main() -> None:
@@ -169,28 +221,36 @@ def main() -> None:
         print(f"Using built-in default list ({len(symbols)} symbols)")
 
     end_date = date.today()
-    start_date = end_date - timedelta(days=365 * args.years)
+    # --years 0 means from start of current year
+    start_date = date(end_date.year, 1, 1) if args.years == 0 else end_date - timedelta(days=365 * args.years)
     start_str = start_date.strftime("%Y-%m-%d")
     end_str = end_date.strftime("%Y-%m-%d")
-    print(f"Date range: {start_str} → {end_str}")
+    print(f"Date range: {start_str} to {end_str}")
 
     conn = get_db_connection()
     try:
-        with conn:
-            with conn.cursor() as cur:
-                print("\n[1/2] Upserting stock metadata …")
-                upsert_stocks(cur, symbols)
+        # Upsert stock metadata in one committed batch
+        print("\n[1/2] Upserting stock metadata...")
+        upsert_stocks(conn, symbols)
 
-                print("\n[2/2] Fetching OHLCV history …")
-                total_rows = 0
-                for i, s in enumerate(symbols, 1):
-                    sym = s["symbol"]
-                    print(f"  ({i}/{len(symbols)}) {sym} …", end=" ", flush=True)
-                    n = fetch_and_insert_ohlcv(cur, sym, start_str, end_str)
-                    print(f"{n} rows")
-                    total_rows += n
+        # Fetch + commit each symbol independently — safe to interrupt and re-run
+        print("\n[2/2] Fetching OHLCV history (commit per symbol)...")
+        total_rows = 0
+        skipped = []
+
+        for i, s in enumerate(symbols, 1):
+            sym = s["symbol"]
+            print(f"  ({i}/{len(symbols)}) {sym}... ", end="", flush=True)
+            n = fetch_and_persist_symbol(conn, sym, start_str, end_str)
+            if n == 0:
+                skipped.append(sym)
+            else:
+                print(f"{n} rows")
+            total_rows += n
 
         print(f"\nDone. Inserted/updated {total_rows} OHLCV rows total.")
+        if skipped:
+            print(f"Skipped ({len(skipped)}): {', '.join(skipped)}")
     finally:
         conn.close()
 
