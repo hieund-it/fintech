@@ -28,7 +28,7 @@ public class SmtpEmailService : IEmailService
         decimal threshold, decimal currentPrice, CancellationToken ct = default)
     {
         var host = _config["Email:SmtpHost"];
-        var port = int.Parse(_config["Email:SmtpPort"] ?? "587");
+        var port = int.TryParse(_config["Email:SmtpPort"], out var p) ? p : 587;
         var username = _config["Email:Username"];
         var password = _config["Email:Password"];
         var from = _config["Email:FromAddress"] ?? "noreply@vnstock.local";

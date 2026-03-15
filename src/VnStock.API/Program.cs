@@ -10,6 +10,9 @@ using VnStock.API.Services;
 using VnStock.Infrastructure;
 using VnStock.Infrastructure.Data;
 
+// Load .env file for local development (NoClobber: existing env vars take precedence)
+DotNetEnv.Env.NoClobber().TraversePath().Load();
+
 // Serilog bootstrap logger — captures startup errors before host is built
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
@@ -54,10 +57,13 @@ try
 
     builder.Services.AddAuthorization();
 
+    var corsOrigins = (builder.Configuration["Cors:Origins"] ?? "http://localhost:5173")
+        .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
     builder.Services.AddCors(options =>
     {
         options.AddPolicy("ReactDev", policy =>
-            policy.WithOrigins("http://localhost:5173", "http://localhost:3000")
+            policy.WithOrigins(corsOrigins)
                   .AllowAnyHeader()
                   .AllowAnyMethod()
                   .AllowCredentials()); // required for SignalR WebSocket
@@ -94,14 +100,14 @@ try
 
     var app = builder.Build();
 
-    // Apply EF Core migrations and seed reference data on startup
+    // Apply EF Core migrations and seed reference data on startup (async to avoid thread pool starvation)
     using (var scope = app.Services.CreateScope())
     {
         var db = scope.ServiceProvider.GetRequiredService<VnStock.Infrastructure.Data.AppDbContext>();
-        db.Database.Migrate();
+        await db.Database.MigrateAsync();
 
-        // Seed stock reference data if table is empty
-        if (!db.Stocks.Any())
+        // Seed stock reference data if table is empty; catch duplicate-key from concurrent startup race
+        if (!await db.Stocks.AnyAsync())
         {
             db.Stocks.AddRange(
                 new VnStock.Domain.Entities.Stock { Symbol = "VCB", Name = "Vietcombank", Exchange = "HOSE", Sector = "Banking" },
@@ -120,7 +126,11 @@ try
                 new VnStock.Domain.Entities.Stock { Symbol = "SAB", Name = "Sabeco", Exchange = "HOSE", Sector = "Consumer Goods" },
                 new VnStock.Domain.Entities.Stock { Symbol = "PLX", Name = "Petrolimex", Exchange = "HOSE", Sector = "Oil & Gas" }
             );
-            db.SaveChanges();
+            try { await db.SaveChangesAsync(); }
+            catch (Microsoft.EntityFrameworkCore.DbUpdateException)
+            {
+                // Another instance seeded concurrently — duplicate key is expected and safe to ignore
+            }
         }
     }
 
@@ -151,8 +161,12 @@ try
         });
     });
 
-    app.UseSwagger();
-    app.UseSwaggerUI();
+    // Restrict Swagger to development — prevents leaking full API surface in production
+    if (app.Environment.IsDevelopment())
+    {
+        app.UseSwagger();
+        app.UseSwaggerUI();
+    }
     app.UseSerilogRequestLogging(); // structured HTTP request logs
     app.UseCors("ReactDev");
     app.UseResponseCaching();

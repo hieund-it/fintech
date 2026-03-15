@@ -17,7 +17,7 @@ public class StocksController : ControllerBase
 
     /// <summary>List all stocks, optionally filtered by exchange, text search, or sector.</summary>
     [HttpGet]
-    [ResponseCache(Duration = 300)]
+    [ResponseCache(Duration = 300, VaryByQueryKeys = new[] { "exchange", "q", "sector" })]
     public async Task<IEnumerable<StockDto>> GetStocks(
         [FromQuery] string? exchange,
         [FromQuery] string? q,

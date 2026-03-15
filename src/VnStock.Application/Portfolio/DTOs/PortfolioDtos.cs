@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace VnStock.Application.Portfolio.DTOs;
 
 public record PortfolioDto(Guid Id, string Name, DateTime CreatedAt);
@@ -15,11 +17,11 @@ public record TransactionDto(
     DateTime TransactedAt);
 
 public record CreateTransactionRequest(
-    string Symbol,
-    string Type,
-    decimal Quantity,
-    decimal Price,
-    decimal Fee,
+    [Required, MinLength(2), MaxLength(10)] string Symbol,
+    [Required] string Type,
+    [Range(0.0001, 1_000_000_000.0)] decimal Quantity,
+    [Range(0.0001, 1_000_000_000.0)] decimal Price,
+    [Range(0, 1_000_000_000.0)] decimal Fee,
     DateTime TransactedAt);
 
 /// <summary>P&amp;L summary for one symbol position within a portfolio.</summary>

@@ -19,10 +19,17 @@ public class AlertService : IAlertService
                 a.Threshold, a.IsActive, a.TriggeredAt, a.CreatedAt))
             .ToListAsync(ct);
 
+    private const int MaxAlertsPerUser = 100;
+
     public async Task<AlertDto> CreateAsync(Guid userId, CreateAlertRequest req, CancellationToken ct = default)
     {
         if (!Enum.TryParse<AlertDirection>(req.Direction.ToUpper(), out var dir))
             throw new ArgumentException($"Invalid direction '{req.Direction}'. Use ABOVE or BELOW.");
+
+        // Enforce per-user cap to prevent unbounded in-memory growth in AlertEngineService
+        var activeCount = await _db.PriceAlerts.CountAsync(a => a.UserId == userId && a.IsActive, ct);
+        if (activeCount >= MaxAlertsPerUser)
+            throw new ArgumentException($"Maximum of {MaxAlertsPerUser} active alerts per user reached.");
 
         var alert = new PriceAlert
         {

@@ -55,13 +55,16 @@ public class RedisMarketDataSubscriber : BackgroundService
         if (symbol is null || message.IsNullOrEmpty)
             return;
 
-        // Throttle: skip if last broadcast was less than 1 second ago
+        // Throttle: skip if last broadcast was less than 1 second ago.
+        // TryUpdate performs an atomic CAS — only the first thread to win the update proceeds,
+        // preventing two concurrent callbacks from both broadcasting the same tick.
         var now = DateTime.UtcNow.Ticks;
         var last = _lastBroadcast.GetOrAdd(symbol, 0L);
         if (now - last < ThrottleIntervalTicks)
             return;
 
-        _lastBroadcast[symbol] = now;
+        if (!_lastBroadcast.TryUpdate(symbol, now, last))
+            return;
 
         try
         {

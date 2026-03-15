@@ -14,18 +14,20 @@ public class AlertsController : ControllerBase
 
     public AlertsController(IAlertService service) => _service = service;
 
-    private Guid UserId => Guid.Parse(User.FindFirst("sub")!.Value);
-
     [HttpGet]
-    public async Task<IEnumerable<AlertDto>> Get(CancellationToken ct)
-        => await _service.GetAsync(UserId, ct);
+    public async Task<ActionResult<IEnumerable<AlertDto>>> Get(CancellationToken ct)
+    {
+        if (!Guid.TryParse(User.FindFirst("sub")?.Value, out var userId)) return Unauthorized();
+        return Ok(await _service.GetAsync(userId, ct));
+    }
 
     [HttpPost]
     public async Task<ActionResult<AlertDto>> Create([FromBody] CreateAlertRequest req, CancellationToken ct)
     {
+        if (!Guid.TryParse(User.FindFirst("sub")?.Value, out var userId)) return Unauthorized();
         try
         {
-            var alert = await _service.CreateAsync(UserId, req, ct);
+            var alert = await _service.CreateAsync(userId, req, ct);
             return CreatedAtAction(nameof(Get), alert);
         }
         catch (ArgumentException ex)
@@ -37,14 +39,16 @@ public class AlertsController : ControllerBase
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
     {
-        var deleted = await _service.DeleteAsync(UserId, id, ct);
+        if (!Guid.TryParse(User.FindFirst("sub")?.Value, out var userId)) return Unauthorized();
+        var deleted = await _service.DeleteAsync(userId, id, ct);
         return deleted ? NoContent() : NotFound();
     }
 
     [HttpPatch("{id:guid}/deactivate")]
     public async Task<IActionResult> Deactivate(Guid id, CancellationToken ct)
     {
-        var updated = await _service.DeactivateAsync(UserId, id, ct);
+        if (!Guid.TryParse(User.FindFirst("sub")?.Value, out var userId)) return Unauthorized();
+        var updated = await _service.DeactivateAsync(userId, id, ct);
         return updated ? NoContent() : NotFound();
     }
 }

@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace VnStock.Application.Alerts.DTOs;
 
 public record AlertDto(
@@ -10,6 +12,6 @@ public record AlertDto(
     DateTime CreatedAt);
 
 public record CreateAlertRequest(
-    string Symbol,
-    string Direction,
-    decimal Threshold);
+    [Required, MinLength(2), MaxLength(10)] string Symbol,
+    [Required] string Direction,
+    [Range(0.01, 1_000_000_000.0)] decimal Threshold);

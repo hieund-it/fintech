@@ -26,19 +26,20 @@ public class AlertEngineService : BackgroundService
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IEmailService _emailService;
     private readonly ILogger<AlertEngineService> _logger;
-
-    private const int ReloadIntervalMinutes = 5;
+    private readonly int _reloadIntervalMinutes;
 
     public AlertEngineService(
         IConnectionMultiplexer redis,
         IServiceScopeFactory scopeFactory,
         IEmailService emailService,
-        ILogger<AlertEngineService> logger)
+        ILogger<AlertEngineService> logger,
+        IConfiguration config)
     {
         _redis = redis;
         _scopeFactory = scopeFactory;
         _emailService = emailService;
         _logger = logger;
+        _reloadIntervalMinutes = config.GetValue<int>("AlertEngine:ReloadIntervalMinutes", 5);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -50,8 +51,8 @@ public class AlertEngineService : BackgroundService
 
         _logger.LogInformation("AlertEngineService started.");
 
-        // Periodic reload every 5 minutes
-        using var timer = new PeriodicTimer(TimeSpan.FromMinutes(ReloadIntervalMinutes));
+        // Periodic reload — interval controlled by AlertEngine:ReloadIntervalMinutes config
+        using var timer = new PeriodicTimer(TimeSpan.FromMinutes(_reloadIntervalMinutes));
         while (!stoppingToken.IsCancellationRequested && await timer.WaitForNextTickAsync(stoppingToken))
         {
             await LoadAlertsFromDbAsync(stoppingToken);
@@ -76,19 +77,22 @@ public class AlertEngineService : BackgroundService
 
         if (tick is null) return;
 
-        var triggered = alerts
-            .Where(a => a.Direction == AlertDirection.ABOVE
-                ? tick.Price >= a.Threshold
-                : tick.Price <= a.Threshold)
-            .ToList();
-
-        if (triggered.Count == 0) return;
-
-        // Remove from in-memory cache first to avoid double-firing
+        // Scan and remove inside a single lock to prevent two concurrent callbacks
+        // from both capturing the same alert into their local triggered list (C1 fix).
+        List<AlertCache> triggered;
         lock (alerts)
         {
-            triggered.ForEach(a => alerts.Remove(a));
+            triggered = alerts
+                .Where(a => a.Direction == AlertDirection.ABOVE
+                    ? tick.Price >= a.Threshold
+                    : tick.Price <= a.Threshold)
+                .ToList();
+
+            if (triggered.Count > 0)
+                triggered.ForEach(a => alerts.Remove(a));
         }
+
+        if (triggered.Count == 0) return;
 
         // Fire-and-forget: persist + send email
         _ = Task.Run(() => FireAlertsAsync(triggered, tick.Price));

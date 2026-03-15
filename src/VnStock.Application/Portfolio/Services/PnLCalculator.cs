@@ -25,7 +25,8 @@ public static class PnLCalculator
             }
             else // SELL
             {
-                if (remainingQty <= 0) continue;
+                // Guard exact zero and floating-point residue that would produce astronomical avgCost
+                if (remainingQty < 0.00001m) continue;
 
                 var avgCost = totalCost / remainingQty;
                 var sellQty = Math.Min(t.Quantity, remainingQty);

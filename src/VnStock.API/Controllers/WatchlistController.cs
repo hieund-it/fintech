@@ -14,26 +14,29 @@ public class WatchlistController : ControllerBase
 
     public WatchlistController(IWatchlistService service) => _service = service;
 
-    private Guid UserId => Guid.Parse(User.FindFirst("sub")!.Value);
-
     [HttpGet]
-    public async Task<IEnumerable<WatchlistItemDto>> Get(CancellationToken ct)
-        => await _service.GetAsync(UserId, ct);
+    public async Task<ActionResult<IEnumerable<WatchlistItemDto>>> Get(CancellationToken ct)
+    {
+        if (!Guid.TryParse(User.FindFirst("sub")?.Value, out var userId)) return Unauthorized();
+        return Ok(await _service.GetAsync(userId, ct));
+    }
 
     [HttpPost]
     public async Task<ActionResult<WatchlistItemDto>> Add([FromBody] AddWatchlistRequest req, CancellationToken ct)
     {
+        if (!Guid.TryParse(User.FindFirst("sub")?.Value, out var userId)) return Unauthorized();
         if (string.IsNullOrWhiteSpace(req.Symbol))
             return BadRequest(new { error = "Symbol is required." });
 
-        var item = await _service.AddAsync(UserId, req.Symbol, ct);
+        var item = await _service.AddAsync(userId, req.Symbol, ct);
         return CreatedAtAction(nameof(Get), item);
     }
 
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Remove(Guid id, CancellationToken ct)
     {
-        var removed = await _service.RemoveAsync(UserId, id, ct);
+        if (!Guid.TryParse(User.FindFirst("sub")?.Value, out var userId)) return Unauthorized();
+        var removed = await _service.RemoveAsync(userId, id, ct);
         return removed ? NoContent() : NotFound();
     }
 }
