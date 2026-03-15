@@ -1,0 +1,8 @@
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Host=localhost;Port=5433;Database=vnstock;Username=postgres;Password=YOUR_POSTGRES_PASSWORD"
+  },
+  "Redis": {
+    "ConnectionString": "localhost:6379"
+  }
+}

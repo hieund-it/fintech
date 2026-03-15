@@ -10,6 +10,7 @@
 *.userosscache
 *.sln.docstates
 *.env
+src/VnStock.API/appsettings.Development.json
 
 # Claude Kit
 .claude
