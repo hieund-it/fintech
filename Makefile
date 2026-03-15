@@ -1,4 +1,4 @@
-.PHONY: up down logs db-shell redis-shell ps build clean
+.PHONY: up down logs db-shell redis-shell ps build clean prod
 
 up:
 	docker compose up -d
@@ -14,6 +14,11 @@ ps:
 
 build:
 	docker compose build
+
+# Build frontend then start all services with nginx (production)
+prod:
+	cd client && npm ci && npm run build
+	docker compose --profile prod up -d
 
 db-shell:
 	docker compose exec postgres psql -U $${POSTGRES_USER:-vnstock_user} -d $${POSTGRES_DB:-vnstock}

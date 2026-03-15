@@ -9,7 +9,8 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
-      - "5433:5432"
+      # Map internal port 5432 to external port 5433 to avoid conflicts with local PostgreSQL
+      - "5433:5432"  
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
@@ -54,6 +55,11 @@ services:
       - Jwt__Secret=${JWT_SECRET}
       - Jwt__Issuer=vnstock-api
       - Jwt__Audience=vnstock-client
+      - Email__SmtpHost=${SMTP_HOST:-}
+      - Email__SmtpPort=${SMTP_PORT:-587}
+      - Email__Username=${SMTP_USER:-}
+      - Email__Password=${SMTP_PASSWORD:-}
+      - Email__FromAddress=${SMTP_FROM:-noreply@vnstock.local}
     depends_on:
       postgres:
         condition: service_healthy
@@ -70,17 +76,24 @@ services:
       context: ./services/vnstock-service
       dockerfile: Dockerfile
     environment:
-      - REDIS_URL=redis://redis:6379
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
       - POSTGRES_HOST=postgres
       - POSTGRES_PORT=5432
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
     depends_on:
       redis:
         condition: service_healthy
       postgres:
         condition: service_healthy
+    ports:
+      - "8000:8000"
     restart: unless-stopped
     networks:
       - vnstock-net

@@ -2,7 +2,7 @@
 
 > A full-stack Vietnamese stock market analytics and portfolio management platform built with .NET 8, FastAPI, and React.
 
-[![Status](https://img.shields.io/badge/Status-Planning-yellow)](#roadmap)
+[![Status](https://img.shields.io/badge/Status-Production--Ready-brightgreen)](#roadmap)
 [![.NET](https://img.shields.io/badge/.NET-8.0-512BD4)](https://dotnet.microsoft.com/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110-009688)](https://fastapi.tiangolo.com/)
 [![React](https://img.shields.io/badge/React-18-61DAFB)](https://react.dev/)
@@ -15,7 +15,7 @@
 
 **fintech** is a real-time Vietnamese stock market platform that provides live price feeds, interactive charting, portfolio tracking, and watchlist management for VN-Index, HNX, and UPCOM markets. Powered by the [vnstock](https://github.com/thinh-vu/vnstock) data library and built on a clean three-service architecture.
 
-> **Status:** Project is currently in the planning phase. Implementation begins in Phase 1 shortly. See [Roadmap](#roadmap) for progress.
+> **Status:** All 4 phases implemented. Platform is production-ready with real-time price board, portfolio management, watchlist, and responsive UI.
 
 ---
 
@@ -33,18 +33,18 @@
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────┐
+┌──────────────────────────────────────────────────┐
 │                   Browser                        │
 │          React 18 + TypeScript + Vite            │
-│     TradingView Charts · Zustand · TanStack       │
-└──────────────────┬──────────────────────────────┘
+│     TradingView Charts · Zustand · TanStack      │
+└──────────────────┬───────────────────────────────┘
                    │  REST + WebSocket (SignalR)
-┌──────────────────▼──────────────────────────────┐
+┌──────────────────▼───────────────────────────────┐
 │             .NET 8 Web API                       │
 │      Clean Architecture · JWT Auth · Redis       │
-└──────────┬───────────────────┬──────────────────┘
+└──────────┬───────────────────┬───────────────────┘
            │                   │
-     PostgreSQL 16        ┌────▼─────────────────┐
+     PostgreSQL 16        ┌────▼──────────────────┐
      (partitioned)        │  Python Data Service  │
                           │  FastAPI · vnstock    │
                           └───────────────────────┘
@@ -70,9 +70,7 @@
 
 ## Quick Start
 
-> **Note:** Implementation is in progress. These steps will work once Phase 1 is complete.
-
-**Prerequisites:** Docker & Docker Compose, Git
+**Prerequisites:** Docker & Docker Compose, Node.js 18+, Git
 
 ```bash
 # Clone repository
@@ -81,23 +79,54 @@ cd fintech
 
 # Copy environment config
 cp .env.example .env
-# Edit .env with your credentials
+# Edit .env — set POSTGRES_PASSWORD and JWT_SECRET at minimum
 
-# Start all services
+# Start backend services (PostgreSQL, Redis, .NET API, Python data service)
 docker compose up -d
 
-# Access the app
-open http://localhost:3000
+# Start frontend dev server
+cd client
+npm install
+npm run dev
 ```
 
 **Service URLs:**
 
 | Service | URL |
 |---------|-----|
-| Frontend | http://localhost:3000 |
+| Frontend (dev) | http://localhost:5173 |
 | .NET API | http://localhost:5000 |
-| Python Data Service | http://localhost:8000 |
 | API Docs (Swagger) | http://localhost:5000/swagger |
+| PostgreSQL | localhost:5432 |
+| Redis | localhost:6379 |
+
+> **Production:** `docker compose --profile prod up -d` starts Nginx at port 80 serving the built frontend.
+
+---
+
+## Development Workflow
+
+```bash
+# Terminal 1 — backend stack (hot-reload enabled via docker-compose.override.yml)
+docker compose up -d
+
+# Terminal 2 — frontend Vite dev server (proxies /api and /hubs to localhost:5000)
+cd client && npm run dev
+```
+
+**Useful commands (via Makefile):**
+
+```bash
+make up           # Start all services
+make down         # Stop all services
+make logs         # Tail all service logs
+make api-logs     # Tail .NET API logs only
+make vnstock-logs # Tail Python data service logs
+make db-shell     # Open psql shell in postgres container
+make redis-shell  # Open redis-cli in redis container
+make clean        # Stop & remove all containers + volumes
+make build        # Rebuild Docker images
+```
 
 ---
 
@@ -105,15 +134,17 @@ open http://localhost:3000
 
 ```
 fintech/
-├── frontend/          # React + TypeScript application
-├── backend/           # .NET 8 Web API (Clean Architecture)
-│   └── src/
-│       ├── Domain/
-│       ├── Application/
-│       ├── Infrastructure/
-│       └── API/
-├── data-service/      # Python FastAPI + vnstock data service
-├── docker/            # Docker Compose & Nginx config
+├── client/            # React 19 + TypeScript + Vite frontend
+├── src/               # .NET 8 Web API (Clean Architecture)
+│   ├── VnStock.Domain/
+│   ├── VnStock.Application/
+│   ├── VnStock.Infrastructure/
+│   └── VnStock.API/
+├── services/
+│   └── vnstock-service/  # Python FastAPI + vnstock data service
+├── db/                # PostgreSQL init scripts
+├── nginx/             # Nginx config (production)
+├── tests/             # Unit & integration tests
 └── docs/              # Project documentation
 ```
 
@@ -123,10 +154,10 @@ fintech/
 
 | Phase | Description | Status |
 |-------|-------------|--------|
-| **Phase 1** | Foundation — Auth, Docker, API skeleton, React scaffold | 🔄 Planning |
-| **Phase 2** | Core Features — Real-time prices, charting, search | ⏳ Pending |
-| **Phase 3** | User Features — Portfolio, watchlist, alerts, dashboard | ⏳ Pending |
-| **Phase 4** | Polish & Production — Mobile UI, CI/CD, monitoring | ⏳ Pending |
+| **Phase 1** | Foundation — Auth, Docker, API skeleton, React scaffold | ✅ Complete |
+| **Phase 2** | Core Features — Real-time prices, charting, search | ✅ Complete |
+| **Phase 3** | User Features — Portfolio, watchlist, alerts, dashboard | ✅ Complete |
+| **Phase 4** | Polish & Production — Mobile UI, CI/CD, monitoring | ✅ Complete |
 | **Phase 5** | International — Multi-market support (post-MVP) | 🔭 Future |
 
 ---
