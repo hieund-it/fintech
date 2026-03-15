@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { useAuthStore } from '../stores/auth-store';
 
 const apiClient = axios.create({
   baseURL: '/api',
@@ -6,9 +7,9 @@ const apiClient = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
-// Attach access token from localStorage on every request
+// Attach access token from in-memory Zustand store (never from localStorage)
 apiClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem('accessToken');
+  const token = useAuthStore.getState().user?.accessToken;
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }

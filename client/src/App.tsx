@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { Component, useState } from 'react';
+import type { ReactNode } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { LoginPage } from './pages/login-page';
@@ -8,6 +9,39 @@ import { MarketPage } from './pages/market-page';
 import { StockDetailPage } from './pages/stock-detail-page';
 import { ProtectedRoute } from './routes/protected-route';
 import { GlobalSearch } from './components/search/global-search';
+
+/** Minimal error boundary — catches render errors and shows a fallback UI. */
+class ErrorBoundary extends Component<
+  { children: ReactNode },
+  { hasError: boolean; message: string }
+> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false, message: '' };
+  }
+
+  static getDerivedStateFromError(error: unknown) {
+    return { hasError: true, message: String(error) };
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex flex-col items-center justify-center h-screen bg-slate-900 text-slate-200 p-8">
+          <p className="text-lg font-semibold mb-2">Something went wrong.</p>
+          <pre className="text-xs text-slate-400 max-w-lg whitespace-pre-wrap">{this.state.message}</pre>
+          <button
+            className="mt-4 px-4 py-2 text-sm bg-blue-600 hover:bg-blue-500 rounded"
+            onClick={() => this.setState({ hasError: false, message: '' })}
+          >
+            Try again
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1 } },
@@ -92,6 +126,7 @@ function AppNav() {
 
 export function App() {
   return (
+    <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <Routes>
@@ -121,5 +156,6 @@ export function App() {
         </Routes>
       </BrowserRouter>
     </QueryClientProvider>
+    </ErrorBoundary>
   );
 }

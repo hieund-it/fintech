@@ -50,7 +50,7 @@ export function useStockOhlcv(
           close: tick.price,
           high: Math.max(prev.high, tick.price),
           low: Math.min(prev.low, tick.price),
-          volume: prev.volume + tick.volume,
+          volume: tick.volume,
         };
         lastBarRef.current = updated;
         series.update({

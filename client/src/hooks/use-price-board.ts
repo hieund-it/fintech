@@ -41,6 +41,9 @@ export function usePriceBoard(options: UsePriceBoardOptions = {}) {
 
       const conn = getConnection();
 
+      // Register handler BEFORE invoking subscriptions so no ticks are missed
+      conn.on('ReceiveTick', handler);
+
       // Subscribe in batches of 50 to avoid overloading the hub
       for (let i = 0; i < stocks.length; i += BATCH_SIZE) {
         const batch = stocks.slice(i, i + BATCH_SIZE);
@@ -48,8 +51,6 @@ export function usePriceBoard(options: UsePriceBoardOptions = {}) {
           batch.map((s) => conn.invoke('SubscribeSymbol', s.symbol)),
         );
       }
-
-      conn.on('ReceiveTick', handler);
     }
 
     setup().catch(console.error);

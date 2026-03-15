@@ -24,7 +24,6 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
         try {
           const res = await apiClient.post<AuthUser>('/auth/login', data);
-          localStorage.setItem('accessToken', res.data.accessToken);
           set({ user: res.data, isLoading: false });
         } catch {
           set({ error: 'Invalid credentials', isLoading: false });
@@ -35,7 +34,6 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
         try {
           const res = await apiClient.post<AuthUser>('/auth/register', data);
-          localStorage.setItem('accessToken', res.data.accessToken);
           set({ user: res.data, isLoading: false });
         } catch {
           set({ error: 'Registration failed', isLoading: false });
@@ -46,7 +44,6 @@ export const useAuthStore = create<AuthState>()(
         try {
           await apiClient.post('/auth/logout');
         } finally {
-          localStorage.removeItem('accessToken');
           set({ user: null, error: null });
         }
       },
@@ -55,7 +52,9 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'auth-storage',
-      partialize: (state) => ({ user: state.user }),
+      partialize: (state) => ({
+        user: state.user ? { ...state.user, accessToken: '' } : null,
+      }),
     },
   ),
 );
