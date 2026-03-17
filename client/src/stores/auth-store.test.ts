@@ -27,8 +27,8 @@ describe('auth-store', () => {
 
     const { user, error } = useAuthStore.getState();
     expect(user?.email).toBe('a@b.com');
+    expect(user?.accessToken).toBe('tok');
     expect(error).toBeNull();
-    expect(localStorage.getItem('accessToken')).toBe('tok');
   });
 
   it('login: sets error on failure', async () => {
@@ -45,13 +45,11 @@ describe('auth-store', () => {
     useAuthStore.setState({
       user: { userId: '1', email: 'a@b.com', displayName: 'Alice', accessToken: 'tok' },
     });
-    localStorage.setItem('accessToken', 'tok');
     mockedPost.mockResolvedValueOnce({});
 
     await useAuthStore.getState().logout();
 
     expect(useAuthStore.getState().user).toBeNull();
-    expect(localStorage.getItem('accessToken')).toBeNull();
   });
 
   it('clearError: resets error field', () => {
