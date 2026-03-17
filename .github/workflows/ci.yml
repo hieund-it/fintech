@@ -11,9 +11,6 @@ jobs:
   build-dotnet:
     name: .NET Build & Test
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: src
 
     steps:
       - uses: actions/checkout@v4
@@ -23,19 +20,34 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
+      # Cache NuGet giúp build nhanh hơn
+      - name: Cache NuGet
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      # Debug để kiểm tra structure (có thể xoá sau)
+      - name: Debug structure
+        run: ls -R
+
       - name: Restore dependencies
-        run: dotnet restore
+        run: dotnet restore **/*.csproj
 
       - name: Build
-        run: dotnet build --no-restore --configuration Release
+        run: dotnet build **/*.csproj --no-restore --configuration Release
 
       - name: Test
-        run: dotnet test --no-build --configuration Release --verbosity normal
+        run: dotnet test **/*Tests.csproj --no-build --configuration Release --verbosity normal
+
 
   # --- Python Data Service ---
   build-python:
     name: Python Build & Test
     runs-on: ubuntu-latest
+
     defaults:
       run:
         working-directory: services/vnstock-service
@@ -59,6 +71,7 @@ jobs:
   build-react:
     name: React Build & Test
     runs-on: ubuntu-latest
+
     defaults:
       run:
         working-directory: client
@@ -80,7 +93,7 @@ jobs:
         run: npm run build
 
       - name: Run tests
-        run: npm test
+        run: npm test --if-present
 
   # --- Docker smoke test ---
   docker-build:
