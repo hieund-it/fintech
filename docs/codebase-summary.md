@@ -468,8 +468,8 @@ PriceAlert
 ### Nginx Reverse Proxy
 
 **Routing**
-- `/api/*` → .NET API (port 5000)
-- `/hubs/*` → SignalR WebSocket (port 5000)
+- `/api/*` → .NET API (port 5001)
+- `/hubs/*` → SignalR WebSocket (port 5001)
 - `/` → React SPA (static files)
 
 **Features**
