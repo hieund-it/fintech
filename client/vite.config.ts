@@ -6,8 +6,8 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
     proxy: {
-      '/api': { target: 'http://localhost:5000', changeOrigin: true },
-      '/hubs': { target: 'http://localhost:5000', ws: true, changeOrigin: true },
+      '/api': { target: 'http://localhost:5001', changeOrigin: true },
+      '/hubs': { target: 'http://localhost:5001', ws: true, changeOrigin: true },
     },
   },
   test: {

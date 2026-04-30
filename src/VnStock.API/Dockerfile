@@ -14,6 +14,6 @@ RUN dotnet publish src/VnStock.API/VnStock.API.csproj -c Release -o /out
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
 COPY --from=build /out .
-EXPOSE 5000
-ENV ASPNETCORE_URLS=http://+:5000
+EXPOSE 5001
+ENV ASPNETCORE_URLS=http://+:5001
 ENTRYPOINT ["dotnet", "VnStock.API.dll"]
