@@ -95,8 +95,8 @@ npm run dev
 | Service | URL |
 |---------|-----|
 | Frontend (dev) | http://localhost:5173 |
-| .NET API | http://localhost:5000 |
-| API Docs (Swagger) | http://localhost:5000/swagger |
+| .NET API | http://localhost:5001 |
+| API Docs (Swagger) | http://localhost:5001/swagger |
 | PostgreSQL | localhost:5432 |
 | Redis | localhost:6379 |
 
@@ -110,7 +110,7 @@ npm run dev
 # Terminal 1 — backend stack (hot-reload enabled via docker-compose.override.yml)
 docker compose up -d
 
-# Terminal 2 — frontend Vite dev server (proxies /api and /hubs to localhost:5000)
+# Terminal 2 — frontend Vite dev server (proxies /api and /hubs to localhost:5001)
 cd client && npm run dev
 ```
 
